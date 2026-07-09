@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from src.eval.walk_forward import validate_splits, walk_forward_splits
+from src.eval.walk_forward import _validate_splits, walk_forward_splits
 
 
 INDEX_50 = pd.bdate_range("2020-01-01", periods=50)
@@ -40,18 +40,18 @@ def test_train_set_grows_each_fold():
 
 def test_validate_passes_on_valid_splits():
     splits = walk_forward_splits(INDEX_50, n_splits=3, horizon=5, min_train_size=1)
-    validate_splits(INDEX_50, splits, horizon=5)
+    _validate_splits(INDEX_50, splits, horizon=5)
 
 
 def test_validate_raises_on_overlapping_dates():
     dates = pd.bdate_range("2020-01-01", periods=20)
     bad_splits = [(dates[10:15], dates[12:18])]
     with pytest.raises(ValueError, match="test starts at"):
-        validate_splits(dates, bad_splits, horizon=2)
+        _validate_splits(dates, bad_splits, horizon=2)
 
 
 def test_validate_raises_on_insufficient_gap():
     dates = pd.bdate_range("2020-01-01", periods=20)
     bad_splits = [(dates[:10], dates[11:15])]
     with pytest.raises(ValueError, match="gap is"):
-        validate_splits(dates, bad_splits, horizon=5)
+        _validate_splits(dates, bad_splits, horizon=5)
