@@ -1,0 +1,45 @@
+# Curated basket: large-caps across sectors + sector ETFs + the VIX.
+# ^VIX is implied-vol context (Phase 1/options tie-in), not a forecast target itself.
+tickers:
+  # Tech
+  - AAPL
+  - MSFT
+  - NVDA
+  - GOOGL
+  - META
+  - AMZN
+  - CRM
+  - ORCL
+  # Financials
+  - JPM
+  - BAC
+  - GS
+  - MS
+  - V
+  # Healthcare
+  - UNH
+  - JNJ
+  - PFE
+  - LLY
+  # Industrials / Energy
+  - XOM
+  - CVX
+  - CAT
+  - GE
+  - BA
+  # Consumer
+  - WMT
+  - HD
+  - MCD
+  - PG
+  - KO
+  - DIS
+  # Sector ETFs
+  - XLF
+  - XLE
+  - XLK
+  - XLV
+  - XLI
+  - SPY
+  # Volatility context
+  - "^VIX"

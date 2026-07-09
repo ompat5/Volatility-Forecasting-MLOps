@@ -1,10 +1,12 @@
 .venv/
 __pycache__/
 *.pyc
-data/
+/data/
 .env
 .DS_Store
 mlruns/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+CLAUDE.md
+CLAUD.md
