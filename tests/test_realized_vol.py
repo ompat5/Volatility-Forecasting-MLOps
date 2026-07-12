@@ -3,10 +3,14 @@ import pandas as pd
 
 from src.features.realized_vol import (
     ANNUALIZED_FACTOR,
+    build_features,
     log_returns,
     realized_vol,
     realized_vol_target,
 )
+
+_RNG = np.random.default_rng(42)
+_PRICES = pd.Series(np.exp(np.cumsum(_RNG.normal(0, 0.01, 300))))
 
 
 def test_log_returns_formula():
@@ -65,3 +69,21 @@ def test_target_tail_is_nan():
     h = 5
     target = realized_vol_target(returns, horizon=h, annualize=True)
     assert target.iloc[-h:].isna().all()
+
+
+def test_build_features_columns():
+    df = build_features(_PRICES)
+    assert list(df.columns) == ["log_returns", "rv_5d", "rv_20d", "rv_60d", "rv_target"]
+
+
+def test_build_features_no_nans():
+    df = build_features(_PRICES)
+    assert not df.isna().any().any()
+
+
+def test_build_features_target_matches_realized_vol_target():
+    df = build_features(_PRICES)
+    returns = log_returns(_PRICES)
+    expected = realized_vol_target(returns, horizon=5).dropna()
+    common = df.index.intersection(expected.index)
+    assert np.allclose(df.loc[common, "rv_target"], expected.loc[common])

@@ -17,4 +17,4 @@ class VolatilityDataset(Dataset):
     def __getitem__(self, idx: int):
         X = self.features[idx: idx + self.seq_len]
         y = self.targets[idx + self.seq_len - 1]
-        return torch.tensor(X), torch.tensor(y)
+        return torch.from_numpy(X.copy()), torch.tensor(float(y))
