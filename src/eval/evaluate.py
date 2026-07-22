@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from src.features.dataset import VolatilityDataset
 from src.models.lstm import VolatilityLSTM
 from src.models.train import predict, train_model
+from src.config import Config
 
 
 def evaluate_baselines(
@@ -56,31 +57,21 @@ def evaluate_baselines(
 
 def evaluate_lstm(
     prices: pd.Series,
-    horizon: int = 5,
-    n_splits: int = 5,
-    min_train_size: int = 252,
-    seq_len: int = 30,
-    hidden_size: int = 64,
-    num_layers: int = 1,
-    dropout: float = 0.2,
-    epochs: int = 50,
-    lr: float = 1e-3,
-    patience: int = 10,
-    val_frac: float = 0.2
+    config: Config
 ) -> pd.DataFrame:
     """Evaluate the LSTM model using various metrics."""
     FEATURE_COLS = ["log_returns", "rv_5d", "rv_20d", "rv_60d"]
     TARGET_COL = "rv_target"
 
-    features = build_features(prices, horizon)
-    splits = walk_forward_splits(features.index, n_splits, horizon, min_train_size)
+    features = build_features(prices, config.data.horizon)
+    splits = walk_forward_splits(features.index, config.eval.n_splits, config.data.horizon, config.eval.min_train_size)
     metric_functions = {"rmse": rmse, "mae": mae, "qlike": qlike}
     all_folds = []
 
     for train_dates, test_dates in splits:
         train_df = features.loc[train_dates]
     
-        n_val = int(len(train_df) * val_frac)
+        n_val = int(len(train_df) * config.eval.val_frac)
         inner_train_df = train_df.iloc[:-n_val].copy()
         val_df = train_df.iloc[-n_val:].copy()
         test_df = features.loc[test_dates].copy()
@@ -90,13 +81,13 @@ def evaluate_lstm(
         val_df[FEATURE_COLS] = scaler.transform(val_df[FEATURE_COLS])
         test_df[FEATURE_COLS] = scaler.transform(test_df[FEATURE_COLS])
 
-        train_loader = DataLoader(VolatilityDataset(inner_train_df, FEATURE_COLS, TARGET_COL, seq_len), batch_size=32, shuffle=True)
-        val_loader = DataLoader(VolatilityDataset(val_df, FEATURE_COLS, TARGET_COL, seq_len), batch_size=32, shuffle=False)
+        train_loader = DataLoader(VolatilityDataset(inner_train_df, FEATURE_COLS, TARGET_COL, config.model.seq_len), batch_size=config.train.batch_size, shuffle=True)
+        val_loader = DataLoader(VolatilityDataset(val_df, FEATURE_COLS, TARGET_COL, config.model.seq_len), batch_size=config.train.batch_size, shuffle=False)
 
-        model = VolatilityLSTM(input_size=len(FEATURE_COLS), hidden_size=hidden_size, num_layers=num_layers, dropout=dropout)
-        model = train_model(model, train_loader, val_loader, epochs=epochs, lr=lr, patience=patience)
+        model = VolatilityLSTM(input_size=len(FEATURE_COLS), hidden_size=config.model.hidden_size, num_layers=config.model.num_layers, dropout=config.model.dropout)
+        model = train_model(model, train_loader, val_loader, epochs=config.train.epochs, lr=config.train.lr, patience=config.train.patience)
 
-        preds = predict(model, test_df, FEATURE_COLS, TARGET_COL, seq_len)
+        preds = predict(model, test_df, FEATURE_COLS, TARGET_COL, config.model.seq_len)
         test_target = test_df[TARGET_COL].dropna()
         common_index = test_target.index.intersection(preds.index)
         

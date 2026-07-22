@@ -1,0 +1,16 @@
+data:
+  horizon: 5
+eval:
+  n_splits: 5
+  min_train_size: 252
+  val_frac: 0.2
+model:
+  seq_len: 30
+  hidden_size: 64
+  num_layers: 1
+  dropout: 0.2
+train:
+  epochs: 50
+  lr: 1.0e-3
+  patience: 10
+  batch_size: 32
