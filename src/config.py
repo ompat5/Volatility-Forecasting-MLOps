@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 import yaml
 
@@ -32,6 +32,7 @@ class TrainConfig:
     lr: float = 1.0e-3
     patience: int = 10
     batch_size: int = 32
+    seed: int = 42
 
 
 @dataclass
@@ -40,6 +41,16 @@ class Config:
     eval: EvalConfig
     model: ModelConfig
     train: TrainConfig
+
+    def flatten(self) -> dict:
+        nested_dict = asdict(self)
+        flat_dict = {}
+
+        for key in nested_dict:
+            for sub_key in nested_dict[key]:
+                flat_dict[f"{key}.{sub_key}"] = nested_dict[key][sub_key]
+
+        return flat_dict
 
 
 def load_config(path: Path = DEFAULT_MODEL_CONFIG) -> Config:

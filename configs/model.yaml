@@ -14,3 +14,4 @@ train:
   lr: 1.0e-3
   patience: 10
   batch_size: 32
+  seed: 42
