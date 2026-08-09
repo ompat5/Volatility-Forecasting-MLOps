@@ -3,7 +3,9 @@ import pandas as pd
 
 from src.features.realized_vol import (
     ANNUALIZED_FACTOR,
+    FEATURE_COLS,
     build_features,
+    build_inference_features,
     log_returns,
     realized_vol,
     realized_vol_target,
@@ -87,3 +89,32 @@ def test_build_features_target_matches_realized_vol_target():
     expected = realized_vol_target(returns, horizon=5).dropna()
     common = df.index.intersection(expected.index)
     assert np.allclose(df.loc[common, "rv_target"], expected.loc[common])
+
+
+def test_build_inference_features_has_no_target_column():
+    # At inference we have no future target — the frame must be feature-only.
+    df = build_inference_features(_PRICES)
+    assert list(df.columns) == FEATURE_COLS
+
+
+def test_build_inference_features_no_nans():
+    df = build_inference_features(_PRICES)
+    assert not df.isna().any().any()
+
+
+def test_build_inference_features_keeps_more_recent_rows():
+    # The whole point: build_features drops the last `horizon` rows (NaN target),
+    # but inference must keep them — those are exactly today's forecastable days.
+    horizon = 5
+    train_df = build_features(_PRICES, horizon)
+    infer_df = build_inference_features(_PRICES)
+    assert len(infer_df) == len(train_df) + horizon
+    assert infer_df.index[-1] > train_df.index[-1]
+
+
+def test_build_inference_features_matches_build_features_on_overlap():
+    # No train/serve skew: shared rows must be byte-identical to the training features.
+    train_df = build_features(_PRICES)
+    infer_df = build_inference_features(_PRICES)
+    common = train_df.index.intersection(infer_df.index)
+    assert np.allclose(train_df.loc[common, FEATURE_COLS], infer_df.loc[common, FEATURE_COLS])
