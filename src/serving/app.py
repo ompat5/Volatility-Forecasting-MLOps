@@ -1,5 +1,6 @@
 import mlflow
 import pandas as pd
+import os
 
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
@@ -15,12 +16,13 @@ class PredictResponse(BaseModel):
     horizon: int
 
 
-MODEL_URI = "models:/volatility-lstm/latest"
+MODEL_URI = os.getenv("MODEL_URI", "models:/volatility-lstm/latest")
 _state = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    mlflow.set_tracking_uri(f"sqlite:///{REPO_ROOT / 'mlflow.db'}")
+    if MODEL_URI.startswith("models:/"):
+        mlflow.set_tracking_uri(f"sqlite:///{REPO_ROOT / 'mlflow.db'}")
     _state["model"] = mlflow.pyfunc.load_model(MODEL_URI)
     yield
     _state.clear()

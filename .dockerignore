@@ -1,0 +1,17 @@
+# Keep the build context small & the image reproducible.
+# NOTE: this is separate from .gitignore — we intentionally DO include ./model here.
+.git
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+mlruns
+mlflow.db
+mlartifacts
+data
+notebooks
+tests
+docs
+.github
