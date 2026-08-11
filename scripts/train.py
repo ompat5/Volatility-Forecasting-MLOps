@@ -2,9 +2,13 @@
 
 import mlflow
 import pandas as pd
-import mlflow.pytorch
-import mlflow.sklearn
+import tempfile
+import joblib
+import torch
+import mlflow.pyfunc
 
+from pathlib import Path
+from src.serving.model_wrapper import VolatilityForecaster
 from src.config import REPO_ROOT, load_config
 from src.data.ingest import DEFAULT_RAW_DIR
 from src.eval.evaluate import evaluate_lstm
@@ -28,12 +32,18 @@ def main(ticker: str = "AAPL") -> None:
         metrics = results.loc["lstm"].to_dict()
         mlflow.log_metrics(metrics)
         model, scaler = train_final_model(prices, cfg)
-        mlflow.pytorch.log_model(
-            model, name="model", 
-            serialization_format="pickle",
-            registered_model_name="volatility-lstm"
-        )
-        mlflow.sklearn.log_model(scaler, name="scaler")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model_path = Path(tmpdir) / "model.pt"
+            scaler_path = Path(tmpdir) / "scaler.pkl"
+            torch.save(model, model_path)
+            joblib.dump(scaler, scaler_path)
+
+            mlflow.pyfunc.log_model(
+                name="model",
+                python_model=VolatilityForecaster(seq_len=cfg.model.seq_len),
+                artifacts={"model": str(model_path), "scaler": str(scaler_path)},
+                registered_model_name="volatility-lstm"
+            )
         print(results.round(4))
 
 

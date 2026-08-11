@@ -24,9 +24,20 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
     "ruff>=0.15.20",
 ]
+
+# Use the CPU-only torch wheels on Linux (the Docker image) to avoid pulling ~2GB of
+# unused CUDA libraries. The marker leaves macOS local dev on its default (CPU/MPS) torch.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

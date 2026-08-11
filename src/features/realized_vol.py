@@ -3,6 +3,9 @@ import pandas as pd
 
 ANNUALIZED_FACTOR = np.sqrt(252)
 
+FEATURE_COLS = ["log_returns", "rv_5d", "rv_20d", "rv_60d"]
+TARGET_COL = "rv_target"
+
 
 def log_returns(prices: pd.Series) -> pd.Series:
     """Calculate the log returns of a ticker's price series."""
@@ -38,3 +41,19 @@ def build_features(prices: pd.Series, horizon: int = 5) -> pd.DataFrame:
         "rv_60d": realized_volatility_60d,
         "rv_target": realized_volatility_target
     }).dropna()
+
+
+def build_inference_features(prices: pd.Series) -> pd.DataFrame:
+    """Build features for inference"""
+    returns = log_returns(prices)
+
+    realized_volatility_5d = realized_vol(returns, window=5)
+    realized_volatility_20d = realized_vol(returns, window=20)
+    realized_volatility_60d = realized_vol(returns, window=60)
+
+    return pd.DataFrame({
+        "log_returns": returns,
+        "rv_5d": realized_volatility_5d,
+        "rv_20d": realized_volatility_20d,
+        "rv_60d": realized_volatility_60d
+    }).dropna(subset=FEATURE_COLS)

@@ -131,13 +131,20 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
 - **Learn:** experiment tracking, model registry, reproducibility — core MLOps vocabulary.
 - **Deliverable:** MLflow UI showing multiple compared runs, a registered "best" model, a config-driven `train.py`.
 
-### Phase 4 — Serving and containerization (Week 4–5)
+### Phase 4 — Serving and containerization (Week 4–5) — ✅ COMPLETE (merged to `main`)
 **Goal:** Anyone can send a request and get a forecast.
 - Build a **FastAPI** service: an endpoint that accepts a ticker (or a recent feature window) and returns a volatility forecast plus a prediction interval. Load the registered model.
 - Validate inputs/outputs with `pydantic`. Write a couple of `pytest` tests.
 - **Dockerize** it; confirm it runs in a container with one command.
 - **Learn:** model serving, REST APIs, containers.
 - **Deliverable:** A running containerized API with an example `curl` command in the README.
+
+**What actually shipped (83 tests):**
+- Model + scaler + inference glue bundled into one `mlflow.pyfunc` (`VolatilityForecaster`) — scaling inseparable from inference, no version drift. Fed by `build_inference_features` (leakage-safe; keeps the most recent `horizon` rows).
+- **FastAPI** `POST /predict` (`{prices: [float]}`, `min_length=90` → `{forecast, horizon}`) + `GET /health`; model loaded once at startup via `lifespan`; `pydantic`-validated; model errors → clean 422.
+- **Dockerized**: one-command CPU-only image serving a baked-in registered model version by local path (no `mlflow.db` in the image); `scripts/export_model.py` snapshots the model into the build context.
+- **Deviations from the original plan:** input is a raw **price window**, not a ticker (keeps yfinance/network out of the request path — deterministic + testable). **Prediction interval deferred** (point forecast only for now) — candidate for a later stretch. README `curl` runbook still to be added.
+- **Design note:** never type-hint `predict`'s `model_input` — MLflow's validation coerces it and silently corrupts predictions.
 
 ### Phase 5 — Automation, CI/CD, and monitoring (Week 5–6)
 **Goal:** The system maintains and watches itself.
