@@ -6,7 +6,6 @@ import argparse
 import json
 import math
 import time
-from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -23,7 +22,9 @@ def wait_for_health(base_url: str, timeout: float = 90.0) -> None:
         try:
             if _get_json(f"{base_url}/health") == {"status": "ok"}:
                 return
-        except (HTTPError, URLError, TimeoutError) as exc:
+        # Container startup can briefly refuse or reset the connection before
+        # Uvicorn begins accepting requests. Both are transient OS-level errors.
+        except (OSError, json.JSONDecodeError) as exc:
             last_error = exc
         time.sleep(2)
     raise TimeoutError(f"API did not become healthy within {timeout}s: {last_error}")
