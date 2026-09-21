@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Create deterministic CI model fixture
+        run: uv run python -m scripts.create_ci_model
+
+      - name: Build CI validation image
+        run: |
+          docker build \
+            --build-arg MODEL_DIR=.ci-model \
+            --build-arg MODEL_VARIANT=ci-fixture \
+            --tag volatility-forecaster:ci \
+            .
+
+      - name: Smoke-test container
+        run: |
+          docker run --detach \
+            --name volatility-forecaster-ci \
+            --publish 8000:8000 \
+            volatility-forecaster:ci
+          uv run python -m scripts.smoke_test_api
+
+      - name: Show container logs after failure
+        if: failure()
+        run: docker logs volatility-forecaster-ci || true
+
+      - name: Stop container
+        if: always()
+        run: docker rm --force volatility-forecaster-ci || true

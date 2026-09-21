@@ -41,3 +41,7 @@ explicit = true
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[tool.ruff]
+# Notebooks are exploratory; reusable production logic belongs in src/ and is linted.
+extend-exclude = ["notebooks"]
