@@ -58,3 +58,13 @@ Production images continue to use an explicitly exported registered model:
 uv run python -m scripts.export_model
 docker build -t volatility-forecaster .
 ```
+
+### Scheduled monitoring
+
+A weekday GitHub Actions pipeline refreshes AAPL data, downloads the immutable
+checksum-pinned production model, generates a forecast, and reports feature
+drift, volatility-regime state, and delayed rolling forecast error. Predictions,
+the input snapshot, and Markdown/JSON reports are retained as workflow artifacts.
+
+See [docs/MONITORING.md](docs/MONITORING.md) for thresholds, methodology, and
+local commands.
