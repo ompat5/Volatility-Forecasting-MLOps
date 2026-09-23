@@ -6,7 +6,6 @@ Run after training: `uv run python -m scripts.export_model`.
 """
 
 import shutil
-from pathlib import Path
 
 import mlflow
 

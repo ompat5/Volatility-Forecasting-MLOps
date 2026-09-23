@@ -3,6 +3,12 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
+# Production builds use ./model. CI overrides this with ./.ci-model, a
+# deterministic fixture that validates packaging without publishing a real model.
+ARG MODEL_DIR=model
+ARG MODEL_VARIANT=production
+LABEL org.opencontainers.image.model-variant="${MODEL_VARIANT}"
+
 # --- Dependency layer (cached) ---
 # Copy ONLY the lockfiles first. This layer is rebuilt only when deps change,
 # so editing app code later doesn't trigger a full reinstall (Docker layer caching).
@@ -15,7 +21,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Copy the code, config, and the baked-in model (exported via scripts/export_model.py).
 COPY src ./src
 COPY configs ./configs
-COPY model ./model
+COPY ${MODEL_DIR} ./model
 
 # Put the venv's binaries on PATH and make `src` importable without installing the package.
 ENV PATH="/app/.venv/bin:$PATH"

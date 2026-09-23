@@ -146,7 +146,7 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
 - **Deviations from the original plan:** input is a raw **price window**, not a ticker (keeps yfinance/network out of the request path — deterministic + testable). **Prediction interval deferred** (point forecast only for now) — candidate for a later stretch. README `curl` runbook still to be added.
 - **Design note:** never type-hint `predict`'s `model_input` — MLflow's validation coerces it and silently corrupts predictions.
 
-### Phase 5 — Automation, CI/CD, and monitoring (Week 5–6)
+### Phase 5 — Automation, CI/CD, and monitoring (Week 5–6) — ✅ COMPLETE
 **Goal:** The system maintains and watches itself.
 - Add a **GitHub Actions** workflow: on every push, run linting (`ruff`) + tests (`pytest`) + build the Docker image.
 - Add a scheduled job (GitHub Actions `cron`, or `Prefect` as a stretch) that refetches data daily, regenerates forecasts, and logs predictions.
@@ -154,6 +154,23 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
 - **The finance payoff:** a volatility *regime shift* (a market stress event) is a textbook example of real distribution drift. Write this up — it's a standout narrative most portfolios can't tell honestly.
 - **Learn:** CI/CD, light orchestration, drift detection.
 - **Deliverable:** A green CI badge, a scheduled pipeline, and a drift/monitoring report.
+
+**What actually shipped (91 tests):**
+- **CI:** every push and pull request runs Ruff, pytest, a Docker build, and an
+  end-to-end container smoke test using a deterministic CI-only model fixture.
+- **Immutable model delivery:** the real AAPL MLflow pyfunc is published as the
+  `aapl-lstm-v1` GitHub Release asset; the scheduled job verifies its SHA-256
+  digest before loading it.
+- **Scheduled pipeline:** weekday GitHub Actions workflow refreshes AAPL history,
+  generates the live five-day forecast, and reconstructs 60 recent as-of
+  forecasts whose targets are now observable.
+- **Monitoring:** custom PSI feature drift, an RV20 training-percentile regime
+  check, and recent-vs-prior rolling error with RMSE, MAE, and QLIKE.
+- **Outputs:** GitHub annotations and workflow summary plus CSV, JSON, Markdown,
+  and exact-price-snapshot artifacts retained for 90 days.
+- **Scope note:** monitoring is AAPL-only because the deployed model is currently
+  AAPL-only. Slack alerts and indefinite external metrics storage remain stretch
+  items; GitHub annotations/artifacts are the Phase 5 MVP alert and log channel.
 
 ### Phase 6 — Optimization, demo, and polish (Week 6–7)
 **Goal:** Make it fast, make it visible, make it legible.

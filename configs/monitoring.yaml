@@ -1,0 +1,16 @@
+monitoring:
+  ticker: AAPL
+  current_window: 60
+  backtest_window: 60
+  recent_error_window: 20
+  psi_warning: 0.10
+  psi_critical: 0.25
+  error_ratio_warning: 1.50
+  error_ratio_critical: 2.00
+
+# The scheduled workflow downloads this exact immutable release asset and checks
+# its digest before loading it.
+model:
+  version: aapl-lstm-v1
+  url: https://github.com/ompat5/Volatility-Forecasting-MLOps/releases/download/aapl-lstm-v1/aapl-lstm-v1.tar.gz
+  sha256: c2a173c88ddf738cfdf3bf5e930f1b415fd1bd54ed61bd21395507cc167c7b6c

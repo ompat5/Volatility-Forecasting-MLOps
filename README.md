@@ -1,5 +1,7 @@
 # Volatility Forecasting MLOps
 
+[![CI](https://github.com/ompat5/Volatility-Forecasting-MLOps/actions/workflows/ci.yml/badge.svg)](https://github.com/ompat5/Volatility-Forecasting-MLOps/actions/workflows/ci.yml)
+
 > Forecasting 5-day realized volatility for a basket of equities/ETFs with a deep learning model, benchmarked against GARCH(1,1), shipped with a full MLOps lifecycle.
 
 ## Hook
@@ -41,4 +43,28 @@ _TODO: fill in once data ingestion, training, and serving exist (Phase 1+)._
 
 ## Status
 
-Phase 0 — repo setup.
+Phases 1–5 complete. Next: Phase 6 — optimization, demo, and polish.
+
+### Continuous integration
+
+Every push and pull request runs Ruff, the pytest suite, a Docker build, and an
+end-to-end container smoke test. CI generates a deterministic fixture in
+`.ci-model/`; it validates the production packaging contract but is not a trained
+forecasting model and is never published.
+
+Production images continue to use an explicitly exported registered model:
+
+```bash
+uv run python -m scripts.export_model
+docker build -t volatility-forecaster .
+```
+
+### Scheduled monitoring
+
+A weekday GitHub Actions pipeline refreshes AAPL data, downloads the immutable
+checksum-pinned production model, generates a forecast, and reports feature
+drift, volatility-regime state, and delayed rolling forecast error. Predictions,
+the input snapshot, and Markdown/JSON reports are retained as workflow artifacts.
+
+See [docs/MONITORING.md](docs/MONITORING.md) for thresholds, methodology, and
+local commands.
