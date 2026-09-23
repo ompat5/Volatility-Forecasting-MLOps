@@ -1,17 +1,6 @@
 name: Daily monitoring
 
 on:
-  # Temporary branch trigger for pre-merge end-to-end validation. Remove after
-  # the first green run; scheduled workflows execute only from the default branch.
-  push:
-    branches: [phase-5-ci]
-    paths:
-      - ".github/workflows/monitoring.yml"
-      - "configs/monitoring.yaml"
-      - "monitoring/**"
-      - "src/monitoring/**"
-      - "scripts/download_production_model.py"
-      - "scripts/run_monitoring.py"
   schedule:
     - cron: "37 18 * * 1-5"
       timezone: "America/Toronto"

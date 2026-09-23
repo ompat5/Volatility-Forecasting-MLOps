@@ -43,7 +43,7 @@ _TODO: fill in once data ingestion, training, and serving exist (Phase 1+)._
 
 ## Status
 
-Phases 1–4 complete. Phase 5 — CI/CD and monitoring — is in progress.
+Phases 1–5 complete. Next: Phase 6 — optimization, demo, and polish.
 
 ### Continuous integration
 
