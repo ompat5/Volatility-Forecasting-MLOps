@@ -12,6 +12,7 @@ mlartifacts/
 .ruff_cache/
 CLAUDE.md
 CLAUD.md
+AGENTS.md
 
 # Exported model artifact for Docker build (regenerate via scripts/export_model.py)
 /model/
