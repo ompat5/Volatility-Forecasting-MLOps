@@ -179,6 +179,50 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
 - Finish the **README** (one-line hook, demo GIF, architecture diagram, results table with metrics, clear run instructions) and write **one short blog post** explaining your key decisions and trade-offs.
 - **Deliverable:** A live demo link, a polished repo, and a write-up.
 
+**Current starting point (after Phase 5):**
+- `main` is green with 91 tests, Docker validation, and live scheduled monitoring.
+- The deployable model is the AAPL-only `aapl-lstm-v1` MLflow pyfunc. Its core
+  PyTorch model and scaler are at `model/artifacts/model.pt` and
+  `model/artifacts/scaler.pkl` after export/download.
+- `onnx`, `onnxruntime<1.20`, and `streamlit` are already declared dependencies.
+- The production input contract is raw adjusted-close prices; ONNX should
+  optimize the `(batch, 30, 4)` LSTM core while Python retains leakage-safe
+  feature calculation and scaling.
+
+**Implementation sequence:**
+1. Add a reproducible FP32 export command using the torch-2.2-compatible legacy
+   `torch.onnx.export` API and validate the ONNX graph.
+2. Add numerical-parity tests on identical scaled tensors before changing any
+   serving path.
+3. Benchmark warm median/p95 core latency, end-to-end latency, and artifact size
+   for PyTorch vs ONNX. Store the raw benchmark result as JSON/CSV and summarize
+   it in the README.
+4. Attempt dynamic INT8 quantization only as a measured extension. Compare
+   predictions and RMSE/MAE/QLIKE on a fixed slice; keep FP32 if INT8 support or
+   accuracy is not acceptable.
+5. Build a small ONNX forecaster that reuses `build_inference_features` and the
+   existing scaler, then cover it with API/integration tests before considering
+   it the optimized serving path.
+6. Build and deploy an explicitly **AAPL-only** Streamlit dashboard with latest
+   forecast, recent realized volatility, the stored baseline table, and current
+   drift/regime/error status.
+7. Replace remaining README placeholders, add benchmark results and a demo
+   image/GIF, document run/deploy commands, and write the short trade-off post.
+
+**Phase 6 acceptance criteria:** reproducible ONNX export; automated parity test;
+published benchmark numbers; evidence-backed INT8 decision; working and deployed
+AAPL dashboard; finished README and write-up.
+
+**Guardrails for this phase:**
+- Do not claim basket-level inference: ingestion covers 35 symbols, but the
+  trained/deployed model is AAPL-only.
+- Benchmark core inference and raw-prices-to-forecast latency separately.
+- The existing LSTM output is unconstrained; do not silently clamp negative
+  forecasts during optimization. That would be a new model behavior requiring
+  reevaluation and versioning.
+- Prediction intervals, a global model, and Slack/external long-term monitoring
+  storage remain deferred unless explicitly pulled into scope.
+
 ---
 
 ## MVP vs stretch
@@ -199,9 +243,9 @@ Once the core works, add a comparison between your **forecasted realized volatil
 
 ## Resume bullet target
 
-> Built and deployed an end-to-end deep learning system forecasting 5-day realized volatility across 40 equities; a global LSTM in PyTorch matched a GARCH(1,1) baseline on walk-forward QLIKE while improving multi-step RMSE by X%. Tracked experiments in MLflow, served via FastAPI + Docker with GitHub Actions CI/CD, added drift monitoring that flags volatility-regime shifts, and cut inference latency Nx via ONNX INT8 quantization with <2% accuracy loss.
+> Built and deployed an end-to-end PyTorch system forecasting five-day AAPL realized volatility; the LSTM improved walk-forward RMSE by 6% and MAE by 7% versus EWMA while remaining near-tied on QLIKE. Tracked experiments and model versions in MLflow, served forecasts through FastAPI + Docker, added GitHub Actions CI and scheduled drift/error monitoring, and [Phase 6: add measured ONNX latency result + live Streamlit demo].
 
-(Fill in the real numbers — honest, modest numbers are more credible than impressive ones.)
+(Keep this AAPL-only until a genuine global model has been trained and evaluated. Replace the Phase 6 bracket only with measured results.)
 
 ---
 

@@ -2,28 +2,33 @@
 
 [![CI](https://github.com/ompat5/Volatility-Forecasting-MLOps/actions/workflows/ci.yml/badge.svg)](https://github.com/ompat5/Volatility-Forecasting-MLOps/actions/workflows/ci.yml)
 
-> Forecasting 5-day realized volatility for a basket of equities/ETFs with a deep learning model, benchmarked against GARCH(1,1), shipped with a full MLOps lifecycle.
+> An end-to-end MLOps system for five-day AAPL realized-volatility forecasting: leakage-safe walk-forward evaluation, classical baselines, MLflow, FastAPI, Docker, CI, and live drift/error monitoring.
 
-## Hook
+## Result
 
-_TODO: one-line result once Phase 1/2 are done, e.g. "A global LSTM matches GARCH(1,1) on walk-forward QLIKE while improving RMSE by X%."_
+The PyTorch LSTM reached **0.2061 RMSE** and **0.1408 MAE** on AAPL walk-forward
+evaluation—about 6% and 7% better than EWMA respectively—while EWMA retained a
+small QLIKE edge. The modest result is the point: the project emphasizes honest
+time-series evaluation and the production lifecycle rather than an implausible
+claim of crushing classical volatility models.
 
 ## Demo
 
-_TODO: link to live Streamlit demo (Phase 6)._
+Coming in Phase 6: a deployed AAPL Streamlit dashboard and ONNX latency/size
+benchmark.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    A["Data ingestion<br/>(yfinance OHLCV + VIX)"] --> B["Feature pipeline<br/>(returns, realized vol, lags)"]
+    A["Data ingestion<br/>(35-symbol cache + VIX)"] --> B["Leakage-safe features<br/>(returns + realized vol)"]
     B --> C["Baseline models<br/>(naive, EWMA, GARCH)"]
-    B --> D["Deep learning<br/>(LSTM / TCN, PyTorch)"]
+    B --> D["AAPL LSTM<br/>(PyTorch)"]
     C --> E["Walk-forward evaluation<br/>(tracked in MLflow)"]
     D --> E
-    E --> F["Model registry<br/>(best model, ONNX export)"]
+    E --> F["MLflow registry +<br/>versioned model release"]
     F --> G["Inference API<br/>(FastAPI in Docker)"]
-    G --> H["Dashboard<br/>(Streamlit demo)"]
+    G -. Phase 6 .-> H["Streamlit demo +<br/>ONNX benchmark"]
     G --> I["Monitoring<br/>(drift + error alerts)"]
 ```
 
@@ -31,19 +36,55 @@ See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) for the full evaluation protocol an
 
 ## Results
 
-_TODO: RMSE / MAE / QLIKE table, DL vs GARCH vs naive on identical walk-forward splits (Phase 1/2)._
+All models use the same five-fold expanding-window protocol with a five-day gap.
+
+| Model | RMSE | MAE | QLIKE |
+|---|---:|---:|---:|
+| Naive | 0.2570 | 0.1698 | 1.6150 |
+| EWMA | 0.2195 | 0.1508 | **0.5792** |
+| GARCH(1,1) | 0.2441 | 0.1892 | 0.6962 |
+| LSTM | **0.2061** | **0.1408** | 0.5822 |
+
+The current trained, served, and monitored model is **AAPL-only**. The repository
+caches a 35-symbol basket, but a global multi-ticker model remains future work.
 
 ## How to run
 
 ```bash
 uv sync
+uv run pytest
+uv run ruff check .
 ```
 
-_TODO: fill in once data ingestion, training, and serving exist (Phase 1+)._
+Train and register the model:
+
+```bash
+uv run python -m src.data.ingest
+uv run python -m scripts.train
+```
+
+Run the API from the local MLflow registry:
+
+```bash
+uv run uvicorn src.serving.app:app --port 8000
+curl http://127.0.0.1:8000/health
+```
+
+Build the production container from an exported registered model:
+
+```bash
+uv run python -m scripts.export_model
+docker build -t volatility-forecaster .
+docker run --rm -p 8000:8000 volatility-forecaster
+```
+
+See [the monitoring runbook](docs/MONITORING.md) for the scheduled workflow,
+thresholds, artifacts, and local monitoring commands.
 
 ## Status
 
-Phases 1–5 complete. Next: Phase 6 — optimization, demo, and polish.
+Phases 1–5 are complete and merged. Phase 6 is next: ONNX export/benchmarking,
+an AAPL Streamlit dashboard, deployment, and final portfolio polish.
 
 ### Continuous integration
 
