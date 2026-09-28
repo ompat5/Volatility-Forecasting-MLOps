@@ -172,46 +172,46 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
   AAPL-only. Slack alerts and indefinite external metrics storage remain stretch
   items; GitHub annotations/artifacts are the Phase 5 MVP alert and log channel.
 
-### Phase 6 — Optimization, demo, and polish (Week 6–7)
+### Phase 6 — Optimization, demo, and polish (Week 6–7) — 🟡 IN PROGRESS
 **Goal:** Make it fast, make it visible, make it legible.
 - Export the model to **ONNX**; optionally quantize to INT8. Benchmark **inference latency and model size** before vs after, and report the accuracy delta. (This is the differentiator most candidates never touch.)
 - Build a **Streamlit** dashboard: pick a ticker → see forecast vs realized vol, DL-vs-GARCH comparison, and a drift indicator. Deploy it (Streamlit Community Cloud or Hugging Face Spaces).
 - Finish the **README** (one-line hook, demo GIF, architecture diagram, results table with metrics, clear run instructions) and write **one short blog post** explaining your key decisions and trade-offs.
 - **Deliverable:** A live demo link, a polished repo, and a write-up.
 
-**Current starting point (after Phase 5):**
-- `main` is green with 91 tests, Docker validation, and live scheduled monitoring.
-- The deployable model is the AAPL-only `aapl-lstm-v1` MLflow pyfunc. Its core
-  PyTorch model and scaler are at `model/artifacts/model.pt` and
-  `model/artifacts/scaler.pkl` after export/download.
-- `onnx`, `onnxruntime<1.20`, and `streamlit` are already declared dependencies.
-- The production input contract is raw adjusted-close prices; ONNX should
-  optimize the `(batch, 30, 4)` LSTM core while Python retains leakage-safe
-  feature calculation and scaling.
+**What has shipped (107 tests):**
+- Reproducible legacy `torch.onnx.export` command for the FP32 `(batch, 30, 4)`
+  LSTM core, with ONNX graph validation and automated PyTorch parity coverage.
+- Machine-readable FP32 benchmark in `benchmarks/onnx_fp32.json`. On the recorded
+  one-thread Darwin x86_64 run, ONNX reduced median core latency from 0.3820 ms
+  to 0.1036 ms (3.7x) and end-to-end latency from 4.2884 ms to 3.9003 ms (9%).
+- Dynamic INT8 experiment in `benchmarks/onnx_int8.json`. It reduced the graph
+  from 74,079 to 23,715 bytes but improved end-to-end median latency by less than
+  1% and moved forecasts by as much as 0.0121. **FP32 was retained**; INT8 is a
+  documented experiment, not the serving default.
+- `ONNXVolatilityForecaster` reuses the production scaler and leakage-safe Python
+  feature pipeline. FastAPI supports it explicitly via `MODEL_BACKEND=onnx`;
+  MLflow remains the default, so optimization was not a silent behavior change.
+- An explicitly **AAPL-only** Streamlit dashboard shows the latest forecast,
+  recent realized volatility, forecast-vs-realized history, the stored baseline
+  table, and feature-drift/regime/delayed-error signals.
+- The dashboard is publicly deployed at
+  https://volatility-forecaster.streamlit.app/ and follows `main`. When model
+  files are absent, it downloads the checksum-pinned `aapl-lstm-v1` release and
+  exports FP32 ONNX once per application process.
+- Optimization and dashboard commits were pushed directly to `main` as
+  `19809bf`, `3d0f67e`, and deployment documentation commit `6c1bcde` (there is
+  no Phase 6 GitHub PR record).
 
-**Implementation sequence:**
-1. Add a reproducible FP32 export command using the torch-2.2-compatible legacy
-   `torch.onnx.export` API and validate the ONNX graph.
-2. Add numerical-parity tests on identical scaled tensors before changing any
-   serving path.
-3. Benchmark warm median/p95 core latency, end-to-end latency, and artifact size
-   for PyTorch vs ONNX. Store the raw benchmark result as JSON/CSV and summarize
-   it in the README.
-4. Attempt dynamic INT8 quantization only as a measured extension. Compare
-   predictions and RMSE/MAE/QLIKE on a fixed slice; keep FP32 if INT8 support or
-   accuracy is not acceptable.
-5. Build a small ONNX forecaster that reuses `build_inference_features` and the
-   existing scaler, then cover it with API/integration tests before considering
-   it the optimized serving path.
-6. Build and deploy an explicitly **AAPL-only** Streamlit dashboard with latest
-   forecast, recent realized volatility, the stored baseline table, and current
-   drift/regime/error status.
-7. Replace remaining README placeholders, add benchmark results and a demo
-   image/GIF, document run/deploy commands, and write the short trade-off post.
+**Remaining Phase 6 work:**
+1. Add a dashboard screenshot or short GIF to the README.
+2. Write the short ONNX/INT8 engineering trade-off post.
+3. Perform the final README/runbook review, update the resume bullet, and mark
+   Phase 6 complete after the final green CI run.
 
-**Phase 6 acceptance criteria:** reproducible ONNX export; automated parity test;
-published benchmark numbers; evidence-backed INT8 decision; working and deployed
-AAPL dashboard; finished README and write-up.
+**Acceptance status:** reproducible ONNX export ✅; automated parity ✅;
+published benchmark artifacts/numbers ✅; evidence-backed INT8 decision ✅;
+working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳.
 
 **Guardrails for this phase:**
 - Do not claim basket-level inference: ingestion covers 35 symbols, but the
@@ -243,9 +243,9 @@ Once the core works, add a comparison between your **forecasted realized volatil
 
 ## Resume bullet target
 
-> Built and deployed an end-to-end PyTorch system forecasting five-day AAPL realized volatility; the LSTM improved walk-forward RMSE by 6% and MAE by 7% versus EWMA while remaining near-tied on QLIKE. Tracked experiments and model versions in MLflow, served forecasts through FastAPI + Docker, added GitHub Actions CI and scheduled drift/error monitoring, and [Phase 6: add measured ONNX latency result + live Streamlit demo].
+> Built and deployed an end-to-end PyTorch system forecasting five-day AAPL realized volatility; improved walk-forward RMSE by 6% and MAE by 7% versus EWMA while remaining near-tied on QLIKE. Tracked experiments and model versions in MLflow, served forecasts through FastAPI + Docker, added GitHub Actions CI and scheduled drift/error monitoring, reduced core inference latency 3.7x with FP32 ONNX, and deployed a live Streamlit dashboard.
 
-(Keep this AAPL-only until a genuine global model has been trained and evaluated. Replace the Phase 6 bracket only with measured results.)
+(Keep this AAPL-only until a genuine global model has been trained and evaluated.)
 
 ---
 

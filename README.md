@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/ompat5/Volatility-Forecasting-MLOps/actions/workflows/ci.yml/badge.svg)](https://github.com/ompat5/Volatility-Forecasting-MLOps/actions/workflows/ci.yml)
 
-> An end-to-end MLOps system for five-day AAPL realized-volatility forecasting: leakage-safe walk-forward evaluation, classical baselines, MLflow, FastAPI, Docker, CI, and live drift/error monitoring.
+> An end-to-end MLOps system for five-day AAPL realized-volatility forecasting:
+> leakage-safe evaluation, MLflow, FastAPI, Docker, CI, monitoring, optimized
+> ONNX inference, and a live Streamlit demo.
 
 ## Result
 
@@ -31,8 +33,10 @@ flowchart TD
     D --> E
     E --> F["MLflow registry +<br/>versioned model release"]
     F --> G["Inference API<br/>(FastAPI in Docker)"]
-    G -. Phase 6 .-> H["Streamlit demo +<br/>ONNX benchmark"]
-    G --> I["Monitoring<br/>(drift + error alerts)"]
+    F --> J["FP32 ONNX export<br/>+ measured optimization"]
+    J --> G
+    J --> H["Live AAPL-only<br/>Streamlit demo"]
+    F --> I["Monitoring<br/>(drift + error alerts)"]
 ```
 
 See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) for the full evaluation protocol and week-by-week plan.
@@ -171,11 +175,12 @@ thresholds, artifacts, and local monitoring commands.
 
 ## Status
 
-Phases 1–5 are complete and merged. Phase 6 is in progress: FP32 ONNX export,
-parity validation, benchmarking, and the measured INT8 decision are complete;
-the opt-in FP32 ONNX serving path and AAPL-only Streamlit dashboard are
-implemented, tested, and publicly deployed. Final portfolio polish and the
-trade-off write-up follow.
+Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
+FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
+opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
+implemented. The current suite has **107 tests**. Remaining Phase 6 work is
+portfolio polish: add a demo image/GIF, finish the short trade-off write-up, and
+perform the final README/runbook review.
 
 ### Continuous integration
 
