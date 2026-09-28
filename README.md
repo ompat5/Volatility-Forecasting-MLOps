@@ -14,8 +14,9 @@ claim of crushing classical volatility models.
 
 ## Demo
 
-Coming in Phase 6: a deployed AAPL Streamlit dashboard. The FP32 ONNX benchmark
-is complete and reported below.
+The AAPL-only Streamlit dashboard is implemented; public deployment is the next
+step. It shows the latest forecast, recent realized volatility, forecast versus
+realized history, stored model comparisons, and live monitoring indicators.
 
 ## Architecture
 
@@ -146,6 +147,23 @@ The ONNX graph accepts scaled tensors shaped `(batch, 30, 4)`. Raw-price
 feature construction and the fitted `StandardScaler` intentionally remain in
 Python so optimization does not change the model's preprocessing contract.
 
+Run the AAPL dashboard with fresh market data:
+
+```bash
+uv run streamlit run dashboard/app.py
+```
+
+For a fully offline, reproducible view using the cached AAPL prices:
+
+```bash
+DASHBOARD_PRICES_PATH=data/raw/AAPL.parquet \
+  uv run streamlit run dashboard/app.py
+```
+
+The dashboard reuses local model artifacts when available. If they are absent,
+it downloads the checksum-pinned `aapl-lstm-v1` release into temporary storage
+and exports the FP32 ONNX graph once per application process.
+
 See [the monitoring runbook](docs/MONITORING.md) for the scheduled workflow,
 thresholds, artifacts, and local monitoring commands.
 
@@ -153,8 +171,8 @@ thresholds, artifacts, and local monitoring commands.
 
 Phases 1–5 are complete and merged. Phase 6 is in progress: FP32 ONNX export,
 parity validation, benchmarking, and the measured INT8 decision are complete;
-the opt-in FP32 ONNX serving path is implemented and tested. The AAPL Streamlit
-dashboard, deployment, and final portfolio polish follow.
+the opt-in FP32 ONNX serving path and AAPL-only Streamlit dashboard are
+implemented and tested. Public deployment and final portfolio polish follow.
 
 ### Continuous integration
 
