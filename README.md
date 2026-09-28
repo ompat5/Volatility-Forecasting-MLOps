@@ -14,9 +14,11 @@ claim of crushing classical volatility models.
 
 ## Demo
 
-The AAPL-only Streamlit dashboard is implemented; public deployment is the next
-step. It shows the latest forecast, recent realized volatility, forecast versus
-realized history, stored model comparisons, and live monitoring indicators.
+**[Open the live AAPL volatility dashboard](https://volatility-forecaster.streamlit.app/)**
+
+The Streamlit demo shows the latest forecast, recent realized volatility,
+forecast versus realized history, stored model comparisons, and live monitoring
+indicators. It is explicitly AAPL-only because the deployed model is AAPL-only.
 
 ## Architecture
 
@@ -172,7 +174,8 @@ thresholds, artifacts, and local monitoring commands.
 Phases 1–5 are complete and merged. Phase 6 is in progress: FP32 ONNX export,
 parity validation, benchmarking, and the measured INT8 decision are complete;
 the opt-in FP32 ONNX serving path and AAPL-only Streamlit dashboard are
-implemented and tested. Public deployment and final portfolio polish follow.
+implemented, tested, and publicly deployed. Final portfolio polish and the
+trade-off write-up follow.
 
 ### Continuous integration
 
