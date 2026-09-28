@@ -29,6 +29,7 @@ def client(monkeypatch):
     # lifespan calls mlflow.pyfunc.load_model at startup — patch it to return a stub so the
     # tests never touch the real registry. Using TestClient as a context manager runs lifespan.
     monkeypatch.setattr("mlflow.pyfunc.load_model", lambda uri: _StubModel())
+    monkeypatch.setenv("MODEL_BACKEND", "mlflow")
     with TestClient(app) as c:
         yield c
 
@@ -59,3 +60,38 @@ def test_predict_handles_model_error(client, monkeypatch):
     resp = client.post("/predict", json={"prices": _valid_prices()})
     assert resp.status_code == 422
     assert "Could not produce a forecast" in resp.json()["detail"]
+
+
+def test_load_forecaster_selects_onnx_backend(monkeypatch):
+    sentinel = _StubModel()
+    captured = {}
+
+    def fake_onnx_forecaster(model_path, scaler_path, *, seq_len, threads):
+        captured.update(
+            model_path=model_path,
+            scaler_path=scaler_path,
+            seq_len=seq_len,
+            threads=threads,
+        )
+        return sentinel
+
+    monkeypatch.setenv("MODEL_BACKEND", "onnx")
+    monkeypatch.setenv("ONNX_MODEL_PATH", "/tmp/model.onnx")
+    monkeypatch.setenv("ONNX_SCALER_PATH", "/tmp/scaler.pkl")
+    monkeypatch.setenv("ONNX_NUM_THREADS", "2")
+    monkeypatch.setattr(
+        app_module, "ONNXVolatilityForecaster", fake_onnx_forecaster
+    )
+
+    assert app_module._load_forecaster() is sentinel
+    assert str(captured["model_path"]) == "/tmp/model.onnx"
+    assert str(captured["scaler_path"]) == "/tmp/scaler.pkl"
+    assert captured["seq_len"] == load_config().model.seq_len
+    assert captured["threads"] == 2
+
+
+def test_load_forecaster_rejects_unknown_backend(monkeypatch):
+    monkeypatch.setenv("MODEL_BACKEND", "unknown")
+
+    with pytest.raises(ValueError, match="Unsupported MODEL_BACKEND"):
+        app_module._load_forecaster()

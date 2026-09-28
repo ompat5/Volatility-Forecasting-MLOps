@@ -1,0 +1,87 @@
+{
+  "artifacts": {
+    "onnx_fp32_size_bytes": 74079,
+    "onnx_int8_size_bytes": 23715
+  },
+  "config": {
+    "evaluation_end": "2026-06-18T00:00:00-04:00",
+    "evaluation_observations": 60,
+    "evaluation_start": "2026-03-25T00:00:00-04:00",
+    "input_shape": [
+      1,
+      30,
+      4
+    ],
+    "iterations": 1000,
+    "price_window": 120,
+    "warmup": 100
+  },
+  "environment": {
+    "cpu_threads_per_runtime": 1,
+    "machine": "x86_64",
+    "onnxruntime": "1.19.2",
+    "python": "3.12.13",
+    "system": "Darwin"
+  },
+  "generated_at_utc": "2026-09-28T01:34:57.012792+00:00",
+  "latency_ms": {
+    "core": {
+      "onnx_fp32": {
+        "iterations": 1000,
+        "max_ms": 0.37623,
+        "median_ms": 0.0755405,
+        "min_ms": 0.07386,
+        "p95_ms": 0.13429419999999997
+      },
+      "onnx_int8": {
+        "iterations": 1000,
+        "max_ms": 0.352464,
+        "median_ms": 0.07008049999999999,
+        "min_ms": 0.06859,
+        "p95_ms": 0.1265100999999999
+      }
+    },
+    "end_to_end": {
+      "onnx_fp32": {
+        "iterations": 1000,
+        "max_ms": 6.480692,
+        "median_ms": 3.4404945,
+        "min_ms": 2.91829,
+        "p95_ms": 4.2706005
+      },
+      "onnx_int8": {
+        "iterations": 1000,
+        "max_ms": 71.90652,
+        "median_ms": 3.4141885,
+        "min_ms": 2.918655,
+        "p95_ms": 4.1936164
+      }
+    }
+  },
+  "metric_delta_int8_minus_fp32": {
+    "mae": -0.0009794950485229464,
+    "qlike": -0.02307420663734422,
+    "rmse": -0.00141103161407867
+  },
+  "metrics": {
+    "onnx_fp32": {
+      "mae": 0.08029502675272965,
+      "qlike": 0.3797184155073231,
+      "rmse": 0.09472016365717519
+    },
+    "onnx_int8": {
+      "mae": 0.0793155317042067,
+      "qlike": 0.3566442088699789,
+      "rmse": 0.09330913204309652
+    }
+  },
+  "non_positive_predictions": {
+    "onnx_fp32": 0,
+    "onnx_int8": 0
+  },
+  "prediction_delta": {
+    "max_absolute": 0.012065470218658447,
+    "mean_absolute": 0.005390265583992004
+  },
+  "schema_version": 1
+}

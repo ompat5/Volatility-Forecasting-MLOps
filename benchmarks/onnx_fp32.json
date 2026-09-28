@@ -1,0 +1,76 @@
+{
+  "artifacts": {
+    "onnx_fp32": {
+      "path": "model/optimized/volatility_lstm_fp32.onnx",
+      "size_bytes": 74079
+    },
+    "pytorch": {
+      "path": "model/artifacts/model.pt",
+      "size_bytes": 75764
+    }
+  },
+  "config": {
+    "input_shape": [
+      1,
+      30,
+      4
+    ],
+    "iterations": 1000,
+    "price_end": "2026-06-26T00:00:00-04:00",
+    "price_observations": 120,
+    "price_start": "2026-01-05T00:00:00-05:00",
+    "warmup": 100
+  },
+  "environment": {
+    "cpu_threads_per_runtime": 1,
+    "machine": "x86_64",
+    "onnx_providers": [
+      "CPUExecutionProvider"
+    ],
+    "onnxruntime": "1.19.2",
+    "python": "3.12.13",
+    "system": "Darwin",
+    "torch": "2.2.2"
+  },
+  "generated_at_utc": "2026-09-28T01:24:19.959526+00:00",
+  "latency_ms": {
+    "core": {
+      "onnx_fp32": {
+        "iterations": 1000,
+        "max_ms": 0.821487,
+        "median_ms": 0.10363800000000001,
+        "min_ms": 0.081855,
+        "p95_ms": 0.2152690999999999
+      },
+      "pytorch": {
+        "iterations": 1000,
+        "max_ms": 2.749124,
+        "median_ms": 0.3819745,
+        "min_ms": 0.321262,
+        "p95_ms": 0.7280414
+      }
+    },
+    "end_to_end": {
+      "onnx_fp32": {
+        "iterations": 1000,
+        "max_ms": 50.820416,
+        "median_ms": 3.9002809999999997,
+        "min_ms": 3.008135,
+        "p95_ms": 6.11849945
+      },
+      "pytorch": {
+        "iterations": 1000,
+        "max_ms": 67.122453,
+        "median_ms": 4.2883890000000005,
+        "min_ms": 3.343046,
+        "p95_ms": 6.351019349999998
+      }
+    }
+  },
+  "parity": {
+    "absolute_difference": 2.9802322387695312e-08,
+    "onnx_fp32_forecast": 0.30595117807388306,
+    "pytorch_forecast": 0.30595120787620544
+  },
+  "schema_version": 1
+}

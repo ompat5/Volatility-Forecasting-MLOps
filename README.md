@@ -14,8 +14,8 @@ claim of crushing classical volatility models.
 
 ## Demo
 
-Coming in Phase 6: a deployed AAPL Streamlit dashboard and ONNX latency/size
-benchmark.
+Coming in Phase 6: a deployed AAPL Streamlit dashboard. The FP32 ONNX benchmark
+is complete and reported below.
 
 ## Architecture
 
@@ -48,6 +48,45 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 The current trained, served, and monitored model is **AAPL-only**. The repository
 caches a 35-symbol basket, but a global multi-ticker model remains future work.
 
+### FP32 ONNX benchmark
+
+The production LSTM core was exported to ONNX and measured on CPU with one
+thread per runtime, 100 warm-up calls, and 1,000 timed calls. These are local
+Darwin x86_64 measurements, not universal latency guarantees.
+
+| Path | Runtime | Median | p95 |
+|---|---|---:|---:|
+| Scaled tensor → forecast | PyTorch | 0.3820 ms | 0.7280 ms |
+| Scaled tensor → forecast | ONNX FP32 | **0.1036 ms** | **0.2153 ms** |
+| Raw prices → forecast | PyTorch | 4.2884 ms | 6.3510 ms |
+| Raw prices → forecast | ONNX FP32 | **3.9003 ms** | **6.1185 ms** |
+
+ONNX reduced median core latency by about 73% (3.7× faster), but reduced
+end-to-end median latency by about 9% because pandas feature construction and
+scaling dominate the full path. The ONNX artifact is 74,079 bytes versus 75,764
+bytes for PyTorch (about 2% smaller), and the production forecasts differed by
+only `2.98e-08`. The machine-readable result is in
+[`benchmarks/onnx_fp32.json`](benchmarks/onnx_fp32.json).
+
+### INT8 quantization decision
+
+Dynamic INT8 quantization was evaluated on the final 60 target-observable AAPL
+dates in the cached dataset (2026-03-25 through 2026-06-18). FP32 and INT8 used
+identical raw-price windows, features, scaler, and targets.
+
+| Runtime | Size | Core median | End-to-end median | RMSE | MAE | QLIKE |
+|---|---:|---:|---:|---:|---:|---:|
+| ONNX FP32 | 74,079 B | 0.0755 ms | 3.4405 ms | 0.09472 | 0.08030 | 0.37972 |
+| ONNX INT8 | 23,715 B | 0.0701 ms | 3.4142 ms | 0.09331 | 0.07932 | 0.35664 |
+
+INT8 is 68% smaller, but improves median end-to-end latency by less than 1%.
+Its forecasts differ from FP32 by `0.0054` on average and `0.0121` at maximum.
+The slightly better metrics on this small slice are treated as quantization
+noise, not a model improvement. **Decision: keep FP32 as the optimized serving
+candidate** because the roughly 50 KiB saving and negligible application-level
+speedup do not justify the larger numerical deviation. The full evidence is in
+[`benchmarks/onnx_int8.json`](benchmarks/onnx_int8.json).
+
 ## How to run
 
 ```bash
@@ -70,6 +109,17 @@ uv run uvicorn src.serving.app:app --port 8000
 curl http://127.0.0.1:8000/health
 ```
 
+Or explicitly opt into the FP32 ONNX backend after exporting the local model:
+
+```bash
+uv run python -m scripts.export_model
+uv run python -m scripts.export_onnx
+MODEL_BACKEND=onnx uv run uvicorn src.serving.app:app --port 8000
+```
+
+MLflow remains the default backend. The ONNX path loads the graph and scaler
+once at API startup and preserves the same raw-price request contract.
+
 Build the production container from an exported registered model:
 
 ```bash
@@ -78,13 +128,33 @@ docker build -t volatility-forecaster .
 docker run --rm -p 8000:8000 volatility-forecaster
 ```
 
+To exercise the optimized backend in that image:
+
+```bash
+docker run --rm -e MODEL_BACKEND=onnx -p 8000:8000 volatility-forecaster
+```
+
+Export the trained LSTM core to a validated FP32 ONNX graph:
+
+```bash
+uv run python -m scripts.export_onnx
+uv run python -m scripts.benchmark_inference
+uv run python -m scripts.quantize_onnx
+```
+
+The ONNX graph accepts scaled tensors shaped `(batch, 30, 4)`. Raw-price
+feature construction and the fitted `StandardScaler` intentionally remain in
+Python so optimization does not change the model's preprocessing contract.
+
 See [the monitoring runbook](docs/MONITORING.md) for the scheduled workflow,
 thresholds, artifacts, and local monitoring commands.
 
 ## Status
 
-Phases 1–5 are complete and merged. Phase 6 is next: ONNX export/benchmarking,
-an AAPL Streamlit dashboard, deployment, and final portfolio polish.
+Phases 1–5 are complete and merged. Phase 6 is in progress: FP32 ONNX export,
+parity validation, benchmarking, and the measured INT8 decision are complete;
+the opt-in FP32 ONNX serving path is implemented and tested. The AAPL Streamlit
+dashboard, deployment, and final portfolio polish follow.
 
 ### Continuous integration
 
