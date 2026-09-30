@@ -22,6 +22,7 @@ def fake_history():
 
 def test_load_ticker_list_reads_basket():
     tickers = ingest.load_ticker_list()
+    assert len(tickers) == 35
     assert "AAPL" in tickers
     assert "^VIX" in tickers
 
@@ -29,6 +30,7 @@ def test_load_ticker_list_reads_basket():
 def test_cache_path_strips_caret(tmp_path):
     assert ingest._cache_path("^VIX", tmp_path) == tmp_path / "VIX.parquet"
     assert ingest._cache_path("AAPL", tmp_path) == tmp_path / "AAPL.parquet"
+    assert ingest.ticker_cache_path("^VIX", tmp_path) == tmp_path / "VIX.parquet"
 
 
 def test_fetch_ticker_raises_on_empty(monkeypatch):

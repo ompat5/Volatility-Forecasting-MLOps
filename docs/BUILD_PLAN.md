@@ -209,6 +209,10 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
 3. Perform the final README/runbook review, update the resume bullet, and mark
    Phase 6 complete after the final green CI run.
 
+These presentation-only tasks are deferred until the global-model migration
+below is complete, so the final demo media and portfolio wording do not freeze
+the temporary AAPL-only architecture in place.
+
 **Acceptance status:** reproducible ONNX export ✅; automated parity ✅;
 published benchmark artifacts/numbers ✅; evidence-backed INT8 decision ✅;
 working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳.
@@ -220,8 +224,41 @@ working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳
 - The existing LSTM output is unconstrained; do not silently clamp negative
   forecasts during optimization. That would be a new model behavior requiring
   reevaluation and versioning.
-- Prediction intervals, a global model, and Slack/external long-term monitoring
-  storage remain deferred unless explicitly pulled into scope.
+- Prediction intervals and Slack/external long-term monitoring storage remain
+  deferred unless explicitly pulled into scope.
+
+### Phase 7 — Global basket model migration — 🟡 IN PROGRESS
+**Goal:** replace the AAPL-only model with one pooled model for all 34 forecast
+targets, using `^VIX` as a context input. The system ingests 35 symbols, but VIX
+is not itself a forecast target.
+
+The migration is deliberately end-to-end: data, evaluation, model packaging,
+serving, ONNX, monitoring, and the dashboard must all share the same explicit
+universe contract before the production default changes.
+
+**Global migration Phase 1 — data foundation (implemented):**
+- `configs/tickers.yaml` now distinguishes 34 targets from the VIX context
+  series and retains asset groups for later evaluation/dashboard breakdowns.
+- `src/data/universe.py` provides a typed, validated source of truth consumed by
+  ingestion and future global components.
+- `src/data/panel.py` normalizes exchange-local timestamps to timezone-free U.S.
+  session dates, preventing the New York-equity/Chicago-VIX join failure.
+- The balanced panel contains the four existing asset features, same-session
+  VIX level and VIX return, and the five-day realized-volatility target.
+- `scripts/build_global_panel.py` writes a gitignored Parquet panel plus a
+  manifest containing universe roles, feature/target schema, horizon, coverage,
+  raw-file hashes, and per-symbol source ranges.
+- On the current cache the contract yields 118,354 rows: 3,481 dates for each of
+  34 targets from 2012-08-14 through 2026-06-18, with no missing values.
+
+**Next migration step:** implement ticker-isolated sequence windows and
+calendar-wide train/embargo/validation/test partitions. No global model may be
+trained until tests prove windows cannot cross ticker boundaries and scalers
+cannot observe validation or test dates.
+
+**Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
+production artifact until the global model passes evaluation, artifact, API,
+ONNX, monitoring, dashboard, and immutable-release acceptance gates.
 
 ---
 
@@ -231,7 +268,7 @@ working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳
 Data + features → walk-forward eval → GARCH baseline → one LSTM that matches/beats it → MLflow tracking → FastAPI in Docker → basic README + Streamlit demo.
 
 **Stretch (depth that impresses):**
-TCN/Transformer comparison · global model with ticker embeddings · ONNX + INT8 with a latency/size benchmark · drift monitoring with the regime-shift write-up · scheduled daily pipeline · the options tie-in below.
+TCN/Transformer comparison · ONNX + INT8 with a latency/size benchmark · drift monitoring with the regime-shift write-up · scheduled daily pipeline · the options tie-in below.
 
 ---
 

@@ -53,7 +53,10 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 | LSTM | **0.2061** | **0.1408** | 0.5822 |
 
 The current trained, served, and monitored model is **AAPL-only**. The repository
-caches a 35-symbol basket, but a global multi-ticker model remains future work.
+caches 34 forecast targets plus VIX context. A global-model migration is now in
+progress: its balanced, timezone-normalized training panel is implemented, but
+no basket-level evaluation or inference is claimed until the new model passes
+the same leakage-safe promotion gates as the AAPL model.
 
 ### FP32 ONNX benchmark
 

@@ -1,45 +1,88 @@
-# Curated basket: large-caps across sectors + sector ETFs + the VIX.
-# ^VIX is implied-vol context (Phase 1/options tie-in), not a forecast target itself.
-tickers:
-  # Tech
-  - AAPL
-  - MSFT
-  - NVDA
-  - GOOGL
-  - META
-  - AMZN
-  - CRM
-  - ORCL
+# One authoritative universe for ingestion and the future global model.
+# Targets receive forecasts. Context series are model inputs only.
+schema_version: 1
+
+targets:
+  # Technology
+  - symbol: AAPL
+    group: technology
+  - symbol: MSFT
+    group: technology
+  - symbol: NVDA
+    group: technology
+  - symbol: GOOGL
+    group: technology
+  - symbol: META
+    group: technology
+  - symbol: AMZN
+    group: technology
+  - symbol: CRM
+    group: technology
+  - symbol: ORCL
+    group: technology
+
   # Financials
-  - JPM
-  - BAC
-  - GS
-  - MS
-  - V
+  - symbol: JPM
+    group: financials
+  - symbol: BAC
+    group: financials
+  - symbol: GS
+    group: financials
+  - symbol: MS
+    group: financials
+  - symbol: V
+    group: financials
+
   # Healthcare
-  - UNH
-  - JNJ
-  - PFE
-  - LLY
-  # Industrials / Energy
-  - XOM
-  - CVX
-  - CAT
-  - GE
-  - BA
+  - symbol: UNH
+    group: healthcare
+  - symbol: JNJ
+    group: healthcare
+  - symbol: PFE
+    group: healthcare
+  - symbol: LLY
+    group: healthcare
+
+  # Industrials and energy
+  - symbol: XOM
+    group: industrials_energy
+  - symbol: CVX
+    group: industrials_energy
+  - symbol: CAT
+    group: industrials_energy
+  - symbol: GE
+    group: industrials_energy
+  - symbol: BA
+    group: industrials_energy
+
   # Consumer
-  - WMT
-  - HD
-  - MCD
-  - PG
-  - KO
-  - DIS
-  # Sector ETFs
-  - XLF
-  - XLE
-  - XLK
-  - XLV
-  - XLI
-  - SPY
-  # Volatility context
-  - "^VIX"
+  - symbol: WMT
+    group: consumer
+  - symbol: HD
+    group: consumer
+  - symbol: MCD
+    group: consumer
+  - symbol: PG
+    group: consumer
+  - symbol: KO
+    group: consumer
+  - symbol: DIS
+    group: consumer
+
+  # Broad and sector ETFs
+  - symbol: XLF
+    group: etf
+  - symbol: XLE
+    group: etf
+  - symbol: XLK
+    group: etf
+  - symbol: XLV
+    group: etf
+  - symbol: XLI
+    group: etf
+  - symbol: SPY
+    group: etf
+
+context:
+  - symbol: "^VIX"
+    role: implied_volatility
