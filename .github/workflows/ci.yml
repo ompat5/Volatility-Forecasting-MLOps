@@ -40,6 +40,9 @@ jobs:
       - name: Create deterministic CI model fixture
         run: uv run python -m scripts.create_ci_model
 
+      - name: Create deterministic global CI model fixture
+        run: uv run python -m scripts.create_ci_global_model
+
       - name: Build CI validation image
         run: |
           docker build \
@@ -48,18 +51,33 @@ jobs:
             --tag volatility-forecaster:ci \
             .
 
-      - name: Smoke-test container
+      - name: Smoke-test AAPL-only default container
         run: |
           docker run --detach \
-            --name volatility-forecaster-ci \
+            --name volatility-forecaster-ci-aapl \
             --publish 8000:8000 \
             volatility-forecaster:ci
           uv run python -m scripts.smoke_test_api
+          docker rm --force volatility-forecaster-ci-aapl
+
+      - name: Smoke-test opt-in global container
+        run: |
+          docker run --detach \
+            --name volatility-forecaster-ci-global \
+            --env GLOBAL_MODEL_URI=/app/global_model \
+            --volume "${{ github.workspace }}/.ci-global-model:/app/global_model:ro" \
+            --publish 8000:8000 \
+            volatility-forecaster:ci
+          uv run python -m scripts.smoke_test_api --expect-global
 
       - name: Show container logs after failure
         if: failure()
-        run: docker logs volatility-forecaster-ci || true
+        run: |
+          docker logs volatility-forecaster-ci-aapl || true
+          docker logs volatility-forecaster-ci-global || true
 
       - name: Stop container
         if: always()
-        run: docker rm --force volatility-forecaster-ci || true
+        run: |
+          docker rm --force volatility-forecaster-ci-aapl || true
+          docker rm --force volatility-forecaster-ci-global || true

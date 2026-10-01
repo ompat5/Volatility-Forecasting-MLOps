@@ -324,10 +324,28 @@ universe contract before the production default changes.
   served an AAPL/SPY subset outside the repository import path. See
   `docs/GLOBAL_MODEL.md` for the contract.
 
-**Next migration step:** add a backward-compatible global FastAPI path and
-global-specific CI fixture. Keep the existing AAPL endpoint and default model
-unchanged until container, ONNX, monitoring, dashboard, and immutable-release
-gates have passed.
+**Global migration Phase 5 — backward-compatible API and CI (implemented):**
+- `POST /predict/global` accepts the artifact's long-form raw observations and
+  returns one validated row per requested target. Known subsets and all 34
+  targets share the same path; `^VIX` remains mandatory.
+- `GLOBAL_MODEL_URI` is optional and separate from the AAPL `MODEL_URI` and
+  `MODEL_BACKEND`. Without it, the service starts normally, `/predict` is
+  unchanged, and the global route returns HTTP 503.
+- Registry-backed global URIs require an explicit numeric
+  `global-volatility-lstm` version. Startup also unwraps the artifact and checks
+  its role, exact ordered 34-target universe, VIX context, and horizon against
+  repository configuration. A mismatched or AAPL artifact fails closed.
+- `GET /health/global` reports global readiness separately without changing the
+  existing `GET /health` response.
+- A deterministic global CI fixture carries the complete production packaging
+  and universe contract but is marked untrained. CI starts the same Docker image
+  in AAPL-only mode and in opt-in global mode, then requires one finite positive
+  forecast for every target plus direct pyfunc/API parity.
+
+**Next migration step:** export and benchmark the global LSTM core in FP32 ONNX,
+add parity coverage across all ticker embeddings, and introduce it only as an
+explicit global backend. Keep the existing AAPL endpoint and production default
+unchanged until ONNX, monitoring, dashboard, and immutable-release gates pass.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,

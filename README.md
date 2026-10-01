@@ -52,12 +52,12 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 | GARCH(1,1) | 0.2441 | 0.1892 | 0.6962 |
 | LSTM | **0.2061** | **0.1408** | 0.5822 |
 
-The current trained, served, and monitored model is **AAPL-only**. The repository
+The current production default and monitoring are **AAPL-only**. The repository
 caches 34 forecast targets plus VIX context. A global-model migration is now in
-progress: its pooled LSTM candidate has now been evaluated, but it is not yet
-served, monitored, or promoted. The candidate is packaged in a separate,
-evidence-gated MLflow artifact; no basket-level production inference is claimed
-until the remaining API, ONNX, monitoring, dashboard, and release gates pass.
+progress: its pooled LSTM candidate has been evaluated, packaged, and integrated
+behind an opt-in FastAPI route, but it is not the production default, monitored,
+or promoted. No basket-level production claim is made until the remaining ONNX,
+monitoring, dashboard, immutable-release, and cutover gates pass.
 
 ### Global candidate benchmark (not production)
 
@@ -86,7 +86,9 @@ metrics, and per-ticker holdout metrics are in
 The global artifact bundles its weights, scaler, ticker vocabulary, feature
 schema, configuration, and benchmark evidence. Its long-form raw-price contract
 and promotion safeguards are documented in
-[`docs/GLOBAL_MODEL.md`](docs/GLOBAL_MODEL.md). The AAPL API remains unchanged.
+[`docs/GLOBAL_MODEL.md`](docs/GLOBAL_MODEL.md). `POST /predict/global` loads only
+when `GLOBAL_MODEL_URI` is explicitly configured; the existing AAPL
+`POST /predict`, `/health`, model URI, and backend defaults remain unchanged.
 
 ### FP32 ONNX benchmark
 
@@ -160,6 +162,21 @@ uv run uvicorn src.serving.app:app --port 8000
 curl http://127.0.0.1:8000/health
 ```
 
+Opt into the global candidate with an explicit registry version:
+
+```bash
+GLOBAL_MODEL_URI=models:/global-volatility-lstm/3 \
+  uv run uvicorn src.serving.app:app --port 8000
+curl http://127.0.0.1:8000/health/global
+```
+
+`POST /predict/global` accepts `observations`, a long-form list of
+`{date, ticker, adjusted_close}` records. Include `^VIX` and one or more known
+targets; the response contains one positive five-session forecast per target.
+The service validates the loaded artifact against the exact 34-target universe
+at startup. Omitting `GLOBAL_MODEL_URI` leaves this endpoint unavailable with
+HTTP 503 while the AAPL service continues normally.
+
 Or explicitly opt into the FP32 ONNX backend after exporting the local model:
 
 ```bash
@@ -177,6 +194,17 @@ Build the production container from an exported registered model:
 uv run python -m scripts.export_model
 docker build -t volatility-forecaster .
 docker run --rm -p 8000:8000 volatility-forecaster
+```
+
+The image still bakes in only the AAPL production artifact. To exercise the
+separately exported global candidate without changing that image default, mount
+the immutable snapshot explicitly:
+
+```bash
+docker run --rm \
+  -e GLOBAL_MODEL_URI=/app/global_model \
+  -v "$(pwd)/global_model:/app/global_model:ro" \
+  -p 8000:8000 volatility-forecaster
 ```
 
 To exercise the optimized backend in that image:
@@ -222,16 +250,19 @@ thresholds, artifacts, and local monitoring commands.
 Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
 FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
 opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
-implemented. The current suite has **107 tests**. Remaining Phase 6 work is
-portfolio polish: add a demo image/GIF, finish the short trade-off write-up, and
-perform the final README/runbook review.
+implemented. Global migration Phases 1–5 now add the complete pooled-model path
+through opt-in API and container validation without changing that production
+default. The current branch has **170 tests**. Remaining global work is ONNX,
+monitoring, dashboard, immutable release, and eventual cutover; final portfolio
+polish follows the migration.
 
 ### Continuous integration
 
-Every push and pull request runs Ruff, the pytest suite, a Docker build, and an
-end-to-end container smoke test. CI generates a deterministic fixture in
-`.ci-model/`; it validates the production packaging contract but is not a trained
-forecasting model and is never published.
+Every push and pull request runs Ruff, the pytest suite, a Docker build, and two
+end-to-end container smoke tests. The first uses the deterministic AAPL fixture
+and proves global serving is disabled by default. The second mounts a separate
+deterministic global fixture and requires all 34 target forecasts. Neither
+fixture is trained or ever published.
 
 Production images continue to use an explicitly exported registered model:
 

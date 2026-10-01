@@ -2,8 +2,8 @@
 
 The global candidate forecasts five-session realized volatility for 34 equities
 and ETFs with one pooled LSTM. `^VIX` is a required context series, not a
-forecast target. The AAPL-only model remains the production API, monitoring,
-ONNX, and dashboard default.
+forecast target. It now has an opt-in FastAPI path, while the AAPL-only model
+remains the production API default, monitoring, ONNX, and dashboard model.
 
 ## Evidence-gated training
 
@@ -87,6 +87,58 @@ Output contains one row per requested target:
 The artifact performs feature construction and scaling internally; callers do
 not send engineered features or embedding IDs.
 
+## Opt-in FastAPI serving
+
+The existing AAPL `POST /predict`, `GET /health`, `MODEL_URI`, and
+`MODEL_BACKEND` behavior is unchanged. Global serving is enabled only when
+`GLOBAL_MODEL_URI` is present:
+
+```bash
+GLOBAL_MODEL_URI=models:/global-volatility-lstm/3 \
+  uv run uvicorn src.serving.app:app --port 8000
+```
+
+Registry URIs must select an explicit numeric version of the separate
+`global-volatility-lstm` model; floating `latest` and model aliases are rejected.
+A local exported snapshot such as `GLOBAL_MODEL_URI=global_model` is also
+supported.
+
+`GET /health/global` reports `disabled` when the optional artifact is absent and
+`ok` only after it has loaded successfully. At startup the API unwraps the
+pyfunc and verifies all of the following against repository configuration:
+
+- global-candidate artifact metadata;
+- the exact ordered set of 34 target tickers;
+- the single `^VIX` context series; and
+- the five-session forecast horizon.
+
+This prevents an AAPL model or stale basket artifact from appearing ready under
+the global route. A configured but incompatible artifact fails application
+startup. With no global URI, the AAPL service starts normally and
+`POST /predict/global` returns HTTP 503.
+
+HTTP requests wrap the artifact's long-form input rows in `observations`:
+
+```json
+{
+  "observations": [
+    {"date": "2026-01-02", "ticker": "AAPL", "adjusted_close": 250.1},
+    {"date": "2026-01-02", "ticker": "^VIX", "adjusted_close": 16.8}
+  ]
+}
+```
+
+The abbreviated example shows the shape only; real requests need enough history
+to construct the complete 30-session feature window. The API checks the model's
+output again and requires every requested target exactly once, in universe
+order, with the expected horizon and a finite positive forecast.
+
+CI generates a deterministic fixture with the production packaging contract
+and the complete 34-target vocabulary. It starts the same Docker image twice:
+once without a global URI to prove the AAPL-only default still works, and once
+with the fixture mounted read-only to exercise all 34 forecasts end to end. The
+fixture is explicitly marked as untrained and is never a release candidate.
+
 ## Phase 4 verification
 
 The real-data registration run fitted 117,368 sequences across 3,481 dates;
@@ -96,5 +148,6 @@ positive forecasts dated 2026-06-26. Loading the explicit exported snapshot
 also succeeded for an AAPL/SPY subset from `/tmp` with the repository absent
 from `PYTHONPATH`.
 
-This proves the artifact contract only. FastAPI, ONNX, monitoring, scheduled
-jobs, and the dashboard remain AAPL-only until their later migration gates pass.
+The real candidate and the deterministic CI artifact both pass direct-pyfunc and
+FastAPI parity checks. ONNX, monitoring, scheduled jobs, the dashboard, and the
+production default remain AAPL-only until their later migration gates pass.
