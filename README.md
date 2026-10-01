@@ -55,8 +55,9 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 The current trained, served, and monitored model is **AAPL-only**. The repository
 caches 34 forecast targets plus VIX context. A global-model migration is now in
 progress: its pooled LSTM candidate has now been evaluated, but it is not yet
-packaged, served, monitored, or promoted. No basket-level production inference
-is claimed until the new model passes those remaining gates.
+served, monitored, or promoted. The candidate is packaged in a separate,
+evidence-gated MLflow artifact; no basket-level production inference is claimed
+until the remaining API, ONNX, monitoring, dashboard, and release gates pass.
 
 ### Global candidate benchmark (not production)
 
@@ -81,6 +82,11 @@ as-is: it clears the implementation/evaluation gate, not the production
 promotion gate. Reproducible configuration, split boundaries, aggregate/group
 metrics, and per-ticker holdout metrics are in
 [`benchmarks/global_model.json`](benchmarks/global_model.json).
+
+The global artifact bundles its weights, scaler, ticker vocabulary, feature
+schema, configuration, and benchmark evidence. Its long-form raw-price contract
+and promotion safeguards are documented in
+[`docs/GLOBAL_MODEL.md`](docs/GLOBAL_MODEL.md). The AAPL API remains unchanged.
 
 ### FP32 ONNX benchmark
 
@@ -136,6 +142,8 @@ holdout GARCH fits):
 uv run python -m scripts.build_global_panel
 uv run python -m scripts.build_global_splits
 uv run python -m scripts.evaluate_global_model
+uv run python -m scripts.train_global
+uv run python -m scripts.export_global_model --version 3  # use the printed version
 ```
 
 Train and register the current AAPL production model:

@@ -11,8 +11,16 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from src.features.panel_dataset import PanelVolatilityDataset
+from src.config import GlobalConfig
+from src.data.panel import GLOBAL_FEATURE_COLS, TARGET_COL, validate_global_panel
+from src.data.universe import Universe
+from src.features.panel_dataset import (
+    BalancedDateBatchSampler,
+    PanelVolatilityDataset,
+)
+from src.features.panel_preprocessing import PanelFeatureScaler
 from src.models.global_lstm import GlobalVolatilityLSTM
+from src.models.train import set_seeds
 
 
 @dataclass(frozen=True)
@@ -21,6 +29,19 @@ class GlobalTrainingResult:
     best_epoch: int
     best_validation_loss: float
     history: tuple[dict[str, float], ...]
+
+
+@dataclass(frozen=True)
+class FinalGlobalTrainingResult:
+    """Components and provenance needed to package the deployable candidate."""
+
+    model: GlobalVolatilityLSTM
+    scaler: PanelFeatureScaler
+    ticker_to_id: dict[str, int]
+    fit_dates: pd.DatetimeIndex
+    epochs: int
+    samples: int
+    dropped_anchor_dates: pd.DatetimeIndex
 
 
 def _log_target_loss(
@@ -113,7 +134,7 @@ def fit_global_model_for_epochs(
     epochs: int,
     lr: float,
 ) -> GlobalVolatilityLSTM:
-    """Refit on all development dates for the CV-selected epoch count."""
+    """Fit on a fixed date set for the CV-selected epoch count."""
     if epochs <= 0 or lr <= 0:
         raise ValueError("epochs and lr must be positive")
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -130,6 +151,64 @@ def fit_global_model_for_epochs(
             raise ValueError("Training loader must not be empty")
     model.eval()
     return model
+
+
+def train_final_global_model(
+    panel: pd.DataFrame,
+    universe: Universe,
+    config: GlobalConfig,
+    *,
+    selected_epochs: int,
+) -> FinalGlobalTrainingResult:
+    """Fit the post-evaluation candidate on every target-observable panel date."""
+    if selected_epochs <= 0:
+        raise ValueError("selected_epochs must be positive")
+    validate_global_panel(panel, universe)
+    fit_dates = panel.index.get_level_values("date").unique().sort_values()
+    ticker_to_id = {
+        ticker: index for index, ticker in enumerate(universe.target_symbols)
+    }
+    scaler = PanelFeatureScaler(tuple(GLOBAL_FEATURE_COLS)).fit(panel, fit_dates)
+    scaled = scaler.transform(panel)
+    dataset = PanelVolatilityDataset(
+        scaled,
+        GLOBAL_FEATURE_COLS,
+        TARGET_COL,
+        config.model.seq_len,
+        fit_dates,
+        ticker_to_id,
+    )
+    sampler = BalancedDateBatchSampler(
+        dataset,
+        dates_per_batch=config.train.dates_per_batch,
+        shuffle=True,
+        seed=config.train.seed,
+    )
+
+    set_seeds(config.train.seed)
+    model = GlobalVolatilityLSTM(
+        input_size=len(GLOBAL_FEATURE_COLS),
+        num_tickers=len(ticker_to_id),
+        embedding_dim=config.model.embedding_dim,
+        hidden_size=config.model.hidden_size,
+        num_layers=config.model.num_layers,
+        dropout=config.model.dropout,
+    )
+    model = fit_global_model_for_epochs(
+        model,
+        DataLoader(dataset, batch_sampler=sampler),
+        epochs=selected_epochs,
+        lr=config.train.lr,
+    )
+    return FinalGlobalTrainingResult(
+        model=model,
+        scaler=scaler,
+        ticker_to_id=ticker_to_id,
+        fit_dates=fit_dates,
+        epochs=selected_epochs,
+        samples=len(dataset),
+        dropped_anchor_dates=dataset.dropped_anchor_dates,
+    )
 
 
 def predict_global_model(

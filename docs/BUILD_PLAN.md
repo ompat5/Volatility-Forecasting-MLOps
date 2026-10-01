@@ -300,10 +300,34 @@ universe contract before the production default changes.
   final holdout. The LSTM beats GARCH on per-ticker holdout RMSE for 21/34,
   MAE for 28/34, and QLIKE for 5/34 targets.
 
-**Next migration step:** package and register the global model as one immutable
-artifact containing its ticker vocabulary, feature schema, fitted scaler,
-configuration, and model weights. Define and test the multi-ticker inference
-contract before changing FastAPI, ONNX, monitoring, or dashboard defaults.
+**Global migration Phase 4 — evidence-gated artifact (implemented):**
+- `scripts/train_global.py` refuses to train unless the current panel SHA-256,
+  full global configuration, ordered universe, GARCH-inclusive metrics, and
+  selected epoch count match the committed Phase 3 benchmark.
+- The post-evaluation candidate refits for the selected four epochs on all
+  3,481 target-observable dates: 117,368 ticker sequences. Its scaler fits all
+  118,354 rows only after the evaluation result is frozen.
+- One MLflow pyfunc bundles `state_dict` weights, scaler, 34-ticker embedding
+  vocabulary, groups/context roles, feature schema, architecture, full config,
+  training coverage, evaluation evidence, and component checksums.
+- The raw inference contract is long-form `(date, ticker, adjusted_close)`.
+  Requests may select known targets but must include VIX; preprocessing remains
+  inside the artifact and output is one positive forecast row per target.
+- The artifact is registered separately as `global-volatility-lstm`. Versions
+  are explicitly tagged candidate/non-production/non-serving; the AAPL
+  `volatility-lstm` registry and API default are untouched.
+- `scripts/export_global_model.py` requires a numeric registry version, refuses
+  overwrite, and snapshots to a separate gitignored `global_model/` directory.
+  No floating `latest` export is allowed.
+- Real-data round trip: registered version 3 loaded successfully, produced 34
+  positive forecasts from all targets plus VIX, and its exported snapshot
+  served an AAPL/SPY subset outside the repository import path. See
+  `docs/GLOBAL_MODEL.md` for the contract.
+
+**Next migration step:** add a backward-compatible global FastAPI path and
+global-specific CI fixture. Keep the existing AAPL endpoint and default model
+unchanged until container, ONNX, monitoring, dashboard, and immutable-release
+gates have passed.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,
