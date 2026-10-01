@@ -33,12 +33,29 @@ class ModelConfig:
 
 
 @dataclass
+class GlobalModelConfig(ModelConfig):
+    embedding_dim: int = 8
+    target_transform: str = "log"
+
+
+@dataclass
 class TrainConfig:
     epochs: int = 50
     lr: float = 1.0e-3
     patience: int = 10
     batch_size: int = 32
     seed: int = 42
+
+
+@dataclass
+class GlobalTrainConfig(TrainConfig):
+    dates_per_batch: int = 4
+
+
+@dataclass
+class BaselineConfig:
+    ewma_span: float = 32.0
+    garch_update: str = "fixed_parameters"
 
 
 @dataclass
@@ -62,6 +79,9 @@ class Config:
 @dataclass
 class GlobalConfig(Config):
     eval: GlobalEvalConfig
+    model: GlobalModelConfig
+    train: GlobalTrainConfig
+    baselines: BaselineConfig
 
 
 def load_config(path: Path = DEFAULT_MODEL_CONFIG) -> Config:
@@ -81,9 +101,15 @@ def load_global_config(
     """Load configuration owned by the global-model path only."""
     with open(path) as f:
         raw = yaml.safe_load(f)
-    return GlobalConfig(
+    config = GlobalConfig(
         data=DataConfig(**raw["data"]),
         eval=GlobalEvalConfig(**raw["eval"]),
-        model=ModelConfig(**raw["model"]),
-        train=TrainConfig(**raw["train"]),
+        model=GlobalModelConfig(**raw["model"]),
+        train=GlobalTrainConfig(**raw["train"]),
+        baselines=BaselineConfig(**raw["baselines"]),
     )
+    if config.model.target_transform != "log":
+        raise ValueError("Global model target_transform must be 'log'")
+    if config.baselines.garch_update != "fixed_parameters":
+        raise ValueError("Global GARCH update mode must be 'fixed_parameters'")
+    return config

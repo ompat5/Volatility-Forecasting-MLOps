@@ -54,10 +54,33 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 
 The current trained, served, and monitored model is **AAPL-only**. The repository
 caches 34 forecast targets plus VIX context. A global-model migration is now in
-progress: its balanced panel, ticker-isolated sequence windows, train-only
-scaling, purged walk-forward calendar, and untouched final holdout are
-implemented. No basket-level model result or inference is claimed until the new
-model passes the remaining promotion gates.
+progress: its pooled LSTM candidate has now been evaluated, but it is not yet
+packaged, served, monitored, or promoted. No basket-level production inference
+is claimed until the new model passes those remaining gates.
+
+### Global candidate benchmark (not production)
+
+The candidate is one shared LSTM for all 34 forecast targets, with a learned
+ticker embedding and same-session VIX context. It trains on log volatility,
+returns positive forecasts, balances every ticker in each training batch, and
+uses one purged calendar for the whole basket. Five expanding folds selected a
+four-epoch final refit, which was scored once on the untouched 252-session
+holdout from 2025-06-18 through 2026-06-18 (8,568 observations per model).
+
+| Model | Macro RMSE | Micro RMSE | Micro MAE | Micro QLIKE |
+|---|---:|---:|---:|---:|
+| Naive | 0.16156 | 0.18064 | 0.11894 | 1.62829 |
+| EWMA | 0.12837 | 0.14536 | 0.09694 | 0.54039 |
+| GARCH(1,1) | 0.12853 | 0.14436 | 0.09785 | **0.52160** |
+| Global LSTM | **0.12581** | **0.14235** | **0.08837** | 0.72611 |
+
+The global LSTM has the best holdout RMSE and MAE, but GARCH retains a clear
+QLIKE advantage. At ticker level, the LSTM beats GARCH on RMSE for 21/34
+targets, MAE for 28/34, and QLIKE for only 5/34. That mixed result is reported
+as-is: it clears the implementation/evaluation gate, not the production
+promotion gate. Reproducible configuration, split boundaries, aggregate/group
+metrics, and per-ticker holdout metrics are in
+[`benchmarks/global_model.json`](benchmarks/global_model.json).
 
 ### FP32 ONNX benchmark
 
@@ -106,7 +129,16 @@ uv run pytest
 uv run ruff check .
 ```
 
-Train and register the model:
+Build and evaluate the global candidate (the full run includes 204 per-fold and
+holdout GARCH fits):
+
+```bash
+uv run python -m scripts.build_global_panel
+uv run python -m scripts.build_global_splits
+uv run python -m scripts.evaluate_global_model
+```
+
+Train and register the current AAPL production model:
 
 ```bash
 uv run python -m src.data.ingest

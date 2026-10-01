@@ -3,7 +3,10 @@ import pandas as pd
 import pytest
 import torch
 
-from src.features.panel_dataset import PanelVolatilityDataset
+from src.features.panel_dataset import (
+    BalancedDateBatchSampler,
+    PanelVolatilityDataset,
+)
 
 FEATURE_COLS = ["feature_1", "feature_2"]
 TARGET_COL = "target"
@@ -121,3 +124,24 @@ def test_dataset_rejects_unknown_anchor_date():
             anchor_dates=pd.DatetimeIndex(["2030-01-01"]),
             ticker_to_id={"AAA": 0, "BBB": 1},
         )
+
+
+def test_balanced_sampler_keeps_every_ticker_in_each_batch():
+    dataset = _dataset()
+    sampler = BalancedDateBatchSampler(
+        dataset,
+        dates_per_batch=2,
+        shuffle=False,
+        seed=7,
+    )
+
+    batches = list(sampler)
+
+    assert len(batches) == 3
+    assert sorted(index for batch in batches for index in batch) == list(
+        range(len(dataset))
+    )
+    for batch in batches:
+        tickers = dataset.sample_index[batch].get_level_values("ticker")
+        counts = tickers.value_counts()
+        assert counts["AAA"] == counts["BBB"]

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
 import numpy as np
 import pandas as pd
+import random
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
 
 
 class PanelVolatilityDataset(Dataset):
@@ -46,9 +48,7 @@ class PanelVolatilityDataset(Dataset):
                 "ticker_to_id must contain every panel ticker exactly once"
             )
 
-        panel_dates = (
-            panel.index.get_level_values("date").unique().sort_values()
-        )
+        panel_dates = panel.index.get_level_values("date").unique().sort_values()
         anchors = pd.DatetimeIndex(anchor_dates).unique().sort_values()
         unknown_dates = anchors[~anchors.isin(panel_dates)]
         if not unknown_dates.empty:
@@ -64,14 +64,12 @@ class PanelVolatilityDataset(Dataset):
         self._targets: dict[str, np.ndarray] = {}
         self._samples: list[tuple[str, int]] = []
 
-        eligible_anchors = anchors[anchors.isin(panel_dates[seq_len - 1:])]
+        eligible_anchors = anchors[anchors.isin(panel_dates[seq_len - 1 :])]
         self.dropped_anchor_dates = anchors.difference(eligible_anchors)
 
         # Sample order is calendar-first and then vocabulary order. This keeps
         # predictions easy to align and makes coverage deterministic.
-        position_by_date = {
-            date: position for position, date in enumerate(panel_dates)
-        }
+        position_by_date = {date: position for position, date in enumerate(panel_dates)}
         ordered_tickers = sorted(ticker_to_id, key=ticker_to_id.get)
         for ticker in ordered_tickers:
             frame = panel.xs(ticker, level="ticker").sort_index()
@@ -110,3 +108,45 @@ class PanelVolatilityDataset(Dataset):
             torch.tensor(ticker_id, dtype=torch.long),
             torch.tensor(float(target), dtype=torch.float32),
         )
+
+
+class BalancedDateBatchSampler(Sampler[list[int]]):
+    """Shuffle complete dates while keeping every ticker in each batch."""
+
+    def __init__(
+        self,
+        dataset: PanelVolatilityDataset,
+        *,
+        dates_per_batch: int,
+        shuffle: bool,
+        seed: int,
+    ) -> None:
+        if dates_per_batch <= 0:
+            raise ValueError("dates_per_batch must be positive")
+        self.dates_per_batch = dates_per_batch
+        self.shuffle = shuffle
+        self.seed = seed
+        self._epoch = 0
+
+        expected_tickers = set(dataset.ticker_to_id)
+        self._indices_by_date: dict[pd.Timestamp, list[int]] = {}
+        for index, (date, ticker) in enumerate(dataset.sample_index):
+            self._indices_by_date.setdefault(date, []).append(index)
+        for date, indices in self._indices_by_date.items():
+            tickers = {dataset.sample_index[index][1] for index in indices}
+            if tickers != expected_tickers:
+                raise ValueError(f"Date {date} does not contain every ticker")
+
+    def __len__(self) -> int:
+        return math.ceil(len(self._indices_by_date) / self.dates_per_batch)
+
+    def __iter__(self):
+        dates = list(self._indices_by_date)
+        if self.shuffle:
+            random.Random(self.seed + self._epoch).shuffle(dates)
+        self._epoch += 1
+        for start in range(0, len(dates), self.dates_per_batch):
+            batch_dates = dates[start : start + self.dates_per_batch]
+            yield [
+                index for date in batch_dates for index in self._indices_by_date[date]
+            ]

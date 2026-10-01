@@ -273,10 +273,37 @@ universe contract before the production default changes.
   On the current cache, final refit data ends 2025-06-10, five sessions are
   embargoed, and the untouched holdout runs 2025-06-18 through 2026-06-18.
 
-**Next migration step:** implement the global LSTM and evaluation runner,
-including ticker embedding, positive/log-volatility output, balanced batching,
-per-ticker metrics, macro/micro aggregates, and honest same-date naive, EWMA,
-and rolling-origin GARCH comparisons.
+**Global migration Phase 3 — model and honest evaluation (implemented):**
+- `GlobalVolatilityLSTM` shares one sequence encoder across all 34 targets and
+  conditions its head on a learned ticker embedding. It predicts log realized
+  volatility; the public prediction path exponentiates it and rejects invalid
+  outputs, so volatility forecasts are strictly positive without clamping.
+- `BalancedDateBatchSampler` shuffles dates, not individual panel rows, and
+  includes every target ticker equally in each training batch.
+- Each CV fold fits its scaler on that fold's training dates only, early-stops
+  on its purged validation dates, and scores its later test dates. The median
+  best epoch across folds is fixed before the final model refits on all allowed
+  development dates.
+- Naive and EWMA forecasts are same-date comparators. GARCH(1,1) parameters are
+  fit only on each fold's training slice, while its latent variance state is
+  updated with newly observed returns before each as-of forecast; test returns
+  never enter parameter estimation.
+- Evaluation reports exact prediction rows, per-ticker metrics, pooled micro,
+  equal-ticker macro, and asset-group slices. The concise committed benchmark
+  also records the panel hash, universe, config, split plan, and epoch choice.
+- On the untouched 252-session holdout, global-LSTM micro RMSE/MAE are
+  `0.14235`/`0.08837`, versus GARCH `0.14436`/`0.09785` and EWMA
+  `0.14536`/`0.09694`. GARCH remains better on QLIKE (`0.52160` versus
+  `0.72611`), so the result is a modest, mixed win rather than a blanket claim.
+- Coverage audit: 399,432 prediction rows, zero duplicate keys, finite positive
+  forecasts, and all 34 targets present for every model in every fold and the
+  final holdout. The LSTM beats GARCH on per-ticker holdout RMSE for 21/34,
+  MAE for 28/34, and QLIKE for 5/34 targets.
+
+**Next migration step:** package and register the global model as one immutable
+artifact containing its ticker vocabulary, feature schema, fitted scaler,
+configuration, and model weights. Define and test the multi-ticker inference
+contract before changing FastAPI, ONNX, monitoring, or dashboard defaults.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,

@@ -12,9 +12,15 @@ model:
   hidden_size: 64
   num_layers: 1
   dropout: 0.2
+  embedding_dim: 8
+  target_transform: log
 train:
   epochs: 50
   lr: 1.0e-3
   patience: 10
-  batch_size: 32
+  batch_size: 512
+  dates_per_batch: 4
   seed: 42
+baselines:
+  ewma_span: 32.0
+  garch_update: fixed_parameters
