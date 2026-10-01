@@ -4,6 +4,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MODEL_CONFIG = REPO_ROOT / "configs" / "model.yaml"
+DEFAULT_GLOBAL_MODEL_CONFIG = REPO_ROOT / "configs" / "global_model.yaml"
 
 
 @dataclass
@@ -16,6 +17,11 @@ class EvalConfig:
     n_splits: int = 5
     min_train_size: int = 252
     val_frac: float = 0.2
+
+
+@dataclass
+class GlobalEvalConfig(EvalConfig):
+    holdout_size: int = 252
 
 
 @dataclass
@@ -53,12 +59,31 @@ class Config:
         return flat_dict
 
 
+@dataclass
+class GlobalConfig(Config):
+    eval: GlobalEvalConfig
+
+
 def load_config(path: Path = DEFAULT_MODEL_CONFIG) -> Config:
     with open(path) as f:
         raw = yaml.safe_load(f)
     return Config(
         data=DataConfig(**raw["data"]),
         eval=EvalConfig(**raw["eval"]),
+        model=ModelConfig(**raw["model"]),
+        train=TrainConfig(**raw["train"]),
+    )
+
+
+def load_global_config(
+    path: Path = DEFAULT_GLOBAL_MODEL_CONFIG,
+) -> GlobalConfig:
+    """Load configuration owned by the global-model path only."""
+    with open(path) as f:
+        raw = yaml.safe_load(f)
+    return GlobalConfig(
+        data=DataConfig(**raw["data"]),
+        eval=GlobalEvalConfig(**raw["eval"]),
         model=ModelConfig(**raw["model"]),
         train=TrainConfig(**raw["train"]),
     )

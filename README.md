@@ -54,9 +54,10 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 
 The current trained, served, and monitored model is **AAPL-only**. The repository
 caches 34 forecast targets plus VIX context. A global-model migration is now in
-progress: its balanced, timezone-normalized training panel is implemented, but
-no basket-level evaluation or inference is claimed until the new model passes
-the same leakage-safe promotion gates as the AAPL model.
+progress: its balanced panel, ticker-isolated sequence windows, train-only
+scaling, purged walk-forward calendar, and untouched final holdout are
+implemented. No basket-level model result or inference is claimed until the new
+model passes the remaining promotion gates.
 
 ### FP32 ONNX benchmark
 

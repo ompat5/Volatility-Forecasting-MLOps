@@ -9,7 +9,7 @@ import argparse
 import json
 from pathlib import Path
 
-from src.config import DEFAULT_MODEL_CONFIG, load_config
+from src.config import DEFAULT_GLOBAL_MODEL_CONFIG, load_global_config
 from src.data.ingest import DEFAULT_RAW_DIR, DEFAULT_TICKERS_CONFIG
 from src.data.panel import build_global_panel, build_panel_manifest
 from src.data.universe import load_universe
@@ -24,7 +24,7 @@ def main() -> None:
     parser.add_argument(
         "--model-config",
         type=Path,
-        default=DEFAULT_MODEL_CONFIG,
+        default=DEFAULT_GLOBAL_MODEL_CONFIG,
         help="Model config supplying the default forecast horizon",
     )
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
@@ -45,7 +45,7 @@ def main() -> None:
     universe = load_universe(args.config)
     horizon = args.horizon
     if horizon is None:
-        horizon = load_config(args.model_config).data.horizon
+        horizon = load_global_config(args.model_config).data.horizon
     panel = build_global_panel(
         universe,
         raw_dir=args.raw_dir,

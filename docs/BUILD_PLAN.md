@@ -251,10 +251,32 @@ universe contract before the production default changes.
 - On the current cache the contract yields 118,354 rows: 3,481 dates for each of
   34 targets from 2012-08-14 through 2026-06-18, with no missing values.
 
-**Next migration step:** implement ticker-isolated sequence windows and
-calendar-wide train/embargo/validation/test partitions. No global model may be
-trained until tests prove windows cannot cross ticker boundaries and scalers
-cannot observe validation or test dates.
+**Global migration Phase 2 — evaluation boundaries (implemented):**
+- `configs/global_model.yaml` owns global-only evaluation and future model
+  choices, keeping the legacy AAPL configuration unchanged.
+- `PanelVolatilityDataset` builds sequences inside one ticker at a time, returns
+  a stable ticker ID for the future embedding, and exposes an exact
+  `(date, ticker)` prediction index.
+- Validation/test anchors may use earlier feature context, but only the anchor
+  dates contribute labels to those partitions. The first training anchors that
+  lack 30 complete feature rows are explicitly recorded and excluded.
+- `build_panel_split_plan` partitions unique calendar dates once for the entire
+  universe, with five-session embargoes before both validation and test.
+- Five expanding folds are used for model/epoch selection. The final 252-session
+  holdout is never part of those folds; after selection, its model must refit on
+  every pre-embargo development date rather than hold back another stale
+  validation period.
+- `PanelFeatureScaler` requires explicit training dates and records them with
+  the fitted row count; validation, test, and holdout values cannot influence
+  its statistics.
+- `scripts/build_global_splits.py` persists the exact fold and holdout calendar.
+  On the current cache, final refit data ends 2025-06-10, five sessions are
+  embargoed, and the untouched holdout runs 2025-06-18 through 2026-06-18.
+
+**Next migration step:** implement the global LSTM and evaluation runner,
+including ticker embedding, positive/log-volatility output, balanced batching,
+per-ticker metrics, macro/micro aggregates, and honest same-date naive, EWMA,
+and rolling-origin GARCH comparisons.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,
