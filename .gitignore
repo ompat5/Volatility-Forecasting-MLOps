@@ -23,3 +23,7 @@ AGENTS.md
 # Deterministic model fixture generated only for CI container validation.
 /.ci-model/
 /.ci-global-model/
+
+# Ephemeral monitoring reports and exact input snapshots.
+/monitoring-output/
+/global-monitoring-output/

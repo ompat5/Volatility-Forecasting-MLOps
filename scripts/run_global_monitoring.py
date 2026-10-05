@@ -1,0 +1,169 @@
+"""Run candidate monitoring across all 34 targets and shared VIX context."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+
+import mlflow.pyfunc
+import pandas as pd
+
+from src.config import load_global_config
+from src.data.ingest import DEFAULT_RAW_DIR, DEFAULT_TICKERS_CONFIG, fetch_ticker
+from src.data.panel import load_adjusted_close, normalize_session_index
+from src.data.universe import Universe, load_universe
+from src.features.global_inference import DATE_COL, PRICE_COL, TICKER_COL
+from src.monitoring.global_pipeline import (
+    load_global_monitoring_config,
+    run_global_monitoring,
+)
+from src.monitoring.global_reporting import write_global_outputs
+from src.serving.global_api import validate_global_forecaster
+
+
+def _long_prices_from_series(
+    prices: dict[str, pd.Series],
+    universe: Universe,
+) -> pd.DataFrame:
+    frames = [
+        pd.DataFrame(
+            {
+                DATE_COL: series.index,
+                TICKER_COL: symbol,
+                PRICE_COL: series.to_numpy(dtype=float),
+            }
+        )
+        for symbol, series in prices.items()
+    ]
+    frame = pd.concat(frames, ignore_index=True)
+    order = {symbol: index for index, symbol in enumerate(universe.all_symbols)}
+    frame["_ticker_order"] = frame[TICKER_COL].map(order)
+    return (
+        frame.sort_values([DATE_COL, "_ticker_order"])
+        .drop(columns="_ticker_order")
+        .reset_index(drop=True)
+    )
+
+
+def load_cached_global_prices(
+    universe: Universe,
+    raw_dir: Path,
+) -> pd.DataFrame:
+    """Load every configured series from the local ingestion cache."""
+    return _long_prices_from_series(
+        {
+            symbol: load_adjusted_close(symbol, raw_dir)
+            for symbol in universe.all_symbols
+        },
+        universe,
+    )
+
+
+def fetch_global_prices(universe: Universe) -> pd.DataFrame:
+    """Refresh every configured series and fail the run on any missing input."""
+    prices: dict[str, pd.Series] = {}
+    failures: dict[str, str] = {}
+    for symbol in universe.all_symbols:
+        try:
+            frame = fetch_ticker(symbol)
+            series = pd.to_numeric(frame["Adj Close"], errors="coerce").dropna()
+            series.index = normalize_session_index(series.index)
+            prices[symbol] = series.sort_index().astype(float)
+        except Exception as exc:  # noqa: BLE001 - report complete universe failures
+            failures[symbol] = str(exc)
+    if failures:
+        raise RuntimeError(f"Failed to refresh global monitoring inputs: {failures}")
+    return _long_prices_from_series(prices, universe)
+
+
+def _artifact_manifest(model) -> dict:
+    try:
+        runtime = model.unwrap_python_model()
+    except (AttributeError, NotImplementedError) as exc:
+        raise ValueError("Global monitoring requires an inspectable MLflow pyfunc") from exc
+    manifest = getattr(runtime, "manifest", None)
+    if not isinstance(manifest, dict):
+        raise ValueError("Global monitoring model lacks an artifact manifest")
+    return manifest
+
+
+def _emit_global_alert(report: dict) -> None:
+    status = report["status"]
+    components = report["component_status"]
+    message = (
+        f"Global monitoring status is {status}: "
+        f"data={components['data_quality']}, drift={components['feature_drift']}, "
+        f"regime={components['volatility_regime']}, "
+        f"error={components['forecast_error']}"
+    )
+    print(message)
+    if os.getenv("GITHUB_ACTIONS") == "true" and status != "ok":
+        annotation = "error" if status == "critical" else "warning"
+        print(f"::{annotation} title=Global volatility monitoring::{message}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/global_monitoring.yaml"),
+    )
+    parser.add_argument(
+        "--reference",
+        type=Path,
+        default=Path("monitoring/global_reference.json"),
+    )
+    parser.add_argument("--universe", type=Path, default=DEFAULT_TICKERS_CONFIG)
+    parser.add_argument("--model-uri", default="global_model")
+    parser.add_argument("--prices", type=Path)
+    parser.add_argument("--raw-dir", type=Path, default=DEFAULT_RAW_DIR)
+    parser.add_argument("--refresh", action="store_true")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("global-monitoring-output"),
+    )
+    args = parser.parse_args()
+    if args.prices is not None and args.refresh:
+        parser.error("--prices and --refresh are mutually exclusive")
+
+    universe = load_universe(args.universe)
+    monitoring_config, model_config = load_global_monitoring_config(args.config)
+    if model_config.get("role") != "global_candidate":
+        raise ValueError("Global monitoring config must identify a candidate model")
+    if args.prices is not None:
+        model_input = pd.read_parquet(args.prices)
+    elif args.refresh:
+        model_input = fetch_global_prices(universe)
+    else:
+        model_input = load_cached_global_prices(universe, args.raw_dir)
+
+    model = mlflow.pyfunc.load_model(args.model_uri)
+    validate_global_forecaster(model)
+    manifest = _artifact_manifest(model)
+    reference = json.loads(args.reference.read_text())
+    report, predictions = run_global_monitoring(
+        model,
+        model_input,
+        reference,
+        universe,
+        monitoring_config,
+        horizon=load_global_config().data.horizon,
+        model_version=model_config["version"],
+        artifact_manifest=manifest,
+        run_date=(
+            pd.Timestamp.now(tz="America/Toronto")
+            if args.refresh
+            else None
+        ),
+    )
+    write_global_outputs(args.output_dir, report, predictions)
+    model_input.to_parquet(args.output_dir / "latest_prices.parquet", index=False)
+    _emit_global_alert(report)
+
+
+if __name__ == "__main__":
+    main()

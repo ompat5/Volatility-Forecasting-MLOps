@@ -79,12 +79,13 @@ def historical_predictions(
     return pd.DataFrame.from_records(records).set_index("as_of")
 
 
-def _error_summary(
+def summarize_forecast_error(
     history: pd.DataFrame,
     recent_window: int,
     warning: float,
     critical: float,
 ) -> dict[str, Any]:
+    """Summarize delayed error for one date-ordered forecast series."""
     if len(history) <= recent_window:
         raise ValueError("Backtest window must exceed the recent error window")
 
@@ -151,7 +152,7 @@ def run_monitoring(
         horizon=horizon,
         window=config.backtest_window,
     )
-    error_summary = _error_summary(
+    error_summary = summarize_forecast_error(
         history,
         config.recent_error_window,
         config.error_ratio_warning,

@@ -52,12 +52,12 @@ All models use the same five-fold expanding-window protocol with a five-day gap.
 | GARCH(1,1) | 0.2441 | 0.1892 | 0.6962 |
 | LSTM | **0.2061** | **0.1408** | 0.5822 |
 
-The current production default and monitoring are **AAPL-only**. The repository
-caches 34 forecast targets plus VIX context. A global-model migration is now in
-progress: its pooled LSTM candidate has been evaluated, packaged, and integrated
-behind an opt-in FastAPI route, but it is not the production default, monitored,
-or promoted. No basket-level production claim is made until the remaining ONNX,
-monitoring, dashboard, immutable-release, and cutover gates pass.
+The production default and scheduled production monitoring are **AAPL-only**.
+The repository caches 34 forecast targets plus VIX context. A global-model
+migration is in progress: its pooled LSTM candidate has been evaluated,
+packaged, optimized, served behind an opt-in route, and given a separate
+candidate monitor. It is not promoted, and its schedule remains disabled until
+the dashboard, immutable-release, and cutover gates pass.
 
 ### Global candidate benchmark (not production)
 
@@ -107,6 +107,21 @@ Maximum PyTorch/ONNX forecast difference was `5.96e-08`.
 See [`docs/GLOBAL_ONNX.md`](docs/GLOBAL_ONNX.md) for the design and runbook and
 [`benchmarks/global_onnx_fp32.json`](benchmarks/global_onnx_fp32.json) for the
 complete hashes, environment, timings, and per-ticker parity evidence.
+
+### Global candidate monitoring (not production)
+
+Phase 7 monitors all 34 targets plus shared VIX context without changing the
+AAPL production workflow. It rejects partial or stale universes, reconstructs
+60 synchronized as-of forecasts without future inputs, and reports drift,
+regime, and delayed error at portfolio, asset-group, and per-ticker levels.
+One fleet alert replaces 34 independent annotations: 10% non-ok tickers produce
+a warning, while critical requires at least 25% of the universe to be critical.
+
+The first real cached-data run, as of 2026-06-26, had complete data quality,
+broad critical feature drift, 7/34 elevated volatility regimes, and 14/34
+error-affected tickers. Pooled recent/baseline RMSE remained `ok` at `1.267`.
+See [`docs/GLOBAL_MONITORING.md`](docs/GLOBAL_MONITORING.md) for thresholds,
+methodology, workflow activation, and interpretation.
 
 ### FP32 ONNX benchmark
 
@@ -273,20 +288,31 @@ The dashboard reuses local model artifacts when available. If they are absent,
 it downloads the checksum-pinned `aapl-lstm-v1` release into temporary storage
 and exports the FP32 ONNX graph once per application process.
 
-See [the monitoring runbook](docs/MONITORING.md) for the scheduled workflow,
-thresholds, artifacts, and local monitoring commands.
+Run the global candidate monitor with the exported `global_model/` snapshot and
+cached all-symbol histories:
+
+```bash
+uv run python -m scripts.run_global_monitoring
+```
+
+Add `--refresh` to refetch all 35 series. This remains candidate QA; it does not
+replace the AAPL production schedule.
+
+See the [AAPL monitoring runbook](docs/MONITORING.md) and
+[global candidate runbook](docs/GLOBAL_MONITORING.md) for thresholds, artifacts,
+and local commands.
 
 ## Status
 
 Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
 FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
 opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
-implemented. Global migration Phases 1–6 now add the pooled-model path through
-opt-in API, FP32 ONNX export, all-embedding parity, measured benchmarking, and
-explicit ONNX serving without changing that production default. Remaining
-global work is monitoring, dashboard, immutable release, and eventual cutover;
-final portfolio polish follows the migration. The current branch has **178
-tests**.
+implemented. Global migration Phases 1–7 now add the pooled-model path through
+opt-in API, FP32 ONNX export, all-embedding parity, measured benchmarking,
+explicit ONNX serving, and full-universe candidate monitoring without changing
+that production default. Remaining global work is the dashboard, immutable
+release, and eventual cutover; final portfolio polish follows the migration.
+The current branch has **185 tests**.
 
 ### Continuous integration
 
@@ -310,5 +336,11 @@ checksum-pinned production model, generates a forecast, and reports feature
 drift, volatility-regime state, and delayed rolling forecast error. Predictions,
 the input snapshot, and Markdown/JSON reports are retained as workflow artifacts.
 
-See [docs/MONITORING.md](docs/MONITORING.md) for thresholds, methodology, and
-local commands.
+A separate global-candidate workflow implements the same lifecycle across all
+34 targets with aggregate/group/ticker views and one fleet alert. Its weekday
+schedule is deliberately dormant until an immutable global archive URL and
+SHA-256 are configured; manual candidate runs are available now.
+
+See [docs/MONITORING.md](docs/MONITORING.md) and
+[docs/GLOBAL_MONITORING.md](docs/GLOBAL_MONITORING.md) for thresholds,
+methodology, and local commands.

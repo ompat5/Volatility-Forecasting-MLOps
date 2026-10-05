@@ -16,3 +16,5 @@ tests
 docs
 .github
 .ci-global-model
+monitoring-output
+global-monitoring-output

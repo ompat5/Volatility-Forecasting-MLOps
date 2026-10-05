@@ -166,5 +166,7 @@ See [`docs/GLOBAL_ONNX.md`](GLOBAL_ONNX.md) for the export, benchmark, and servi
 runbook and [`benchmarks/global_onnx_fp32.json`](../benchmarks/global_onnx_fp32.json)
 for the complete evidence.
 
-Monitoring, scheduled jobs, the dashboard, immutable release, and the production
-default remain AAPL-only until their later migration gates pass.
+Candidate monitoring now covers all 34 targets at aggregate, asset-group, and
+per-ticker levels; see [`docs/GLOBAL_MONITORING.md`](GLOBAL_MONITORING.md).
+The AAPL scheduled monitor, dashboard, immutable release, and production default
+remain authoritative until their later migration gates pass.

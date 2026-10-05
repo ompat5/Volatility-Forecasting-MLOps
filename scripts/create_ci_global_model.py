@@ -31,7 +31,7 @@ from src.serving.global_model_wrapper import GlobalVolatilityForecaster
 
 DEFAULT_OUTPUT = Path(".ci-global-model")
 FIXTURE_FORECAST = 0.2
-FIXTURE_DATES = 90
+FIXTURE_DATES = 140
 
 
 def _scaler_panel() -> pd.DataFrame:

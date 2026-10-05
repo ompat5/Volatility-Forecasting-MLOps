@@ -364,10 +364,32 @@ universe contract before the production default changes.
 - Reproduction instructions and trade-offs are in `docs/GLOBAL_ONNX.md`; the
   machine-readable report is `benchmarks/global_onnx_fp32.json`.
 
-**Next migration step:** extend drift, regime, and delayed-error monitoring to
-all 34 targets with aggregate, per-ticker, and asset-group views. Keep the AAPL
-production default unchanged until monitoring, dashboard, immutable-release,
-and final cutover gates pass.
+**Global migration Phase 7 — candidate monitoring (implemented):**
+- `monitoring/global_reference.json` binds fixed per-ticker asset-feature PSI
+  bins, one shared VIX reference, and per-ticker RV20 p95/p99 thresholds to the
+  exact accepted training-panel checksum and authoritative universe.
+- Every run requires all 34 targets plus VIX, checks duplicate/finite/positive
+  inputs and staleness, and requires synchronized one-row-per-target forecasts.
+- Sixty historical dates are reconstructed through the raw-price artifact path;
+  each call sees only its own as-of history. Target values are joined only after
+  prediction, preserving the delayed-error no-leakage contract.
+- Reports include pooled micro, equal-ticker macro, asset-group, and per-ticker
+  drift, regime, RMSE, MAE, and QLIKE evidence. Shared VIX drift is counted once,
+  not repeated as 34 apparent asset failures.
+- Fleet aggregation emits one alert: 10% non-ok produces warning, 25% critical
+  produces critical, and one isolated critical ticker becomes one warning rather
+  than an alert storm. Contract/data-quality failures still fail closed.
+- The separate weekday workflow remains dormant until an immutable global model
+  URL and checksum are explicitly configured. Manual candidate QA is available;
+  the AAPL production workflow is unchanged.
+- First real cached-data run (2026-06-26): complete 34+1 coverage and data quality
+  `ok`; broad feature drift `critical`; 7/34 elevated regimes; 14/34 ticker error
+  warnings/criticals; pooled recent/baseline RMSE ratio `1.267` (`ok`).
+
+**Next migration step:** migrate the dashboard to the 34-target contract, then
+publish and checksum-pin an immutable global candidate release. Only after both
+gates pass should the scheduled global monitor be enabled and an explicit
+production-cutover review begin.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,

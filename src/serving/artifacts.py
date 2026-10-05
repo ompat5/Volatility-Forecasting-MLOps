@@ -14,14 +14,26 @@ from src.monitoring.pipeline import load_monitoring_config
 
 def download_model(config_path: Path, output: Path) -> Path:
     """Fetch, checksum, and safely extract the configured model archive."""
+    _, model_config = load_monitoring_config(config_path)
+    return download_verified_model(
+        model_config["url"],
+        model_config["sha256"],
+        output,
+    )
+
+
+def download_verified_model(
+    url: str,
+    expected_digest: str,
+    output: Path,
+) -> Path:
+    """Fetch and safely extract one explicitly checksum-pinned model archive."""
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite existing path: {output}")
-
-    _, model_config = load_monitoring_config(config_path)
-    url = model_config["url"]
-    expected_digest = model_config["sha256"]
     if "PLACEHOLDER" in url or "PLACEHOLDER" in expected_digest:
-        raise ValueError("Production model release metadata has not been configured")
+        raise ValueError("Model release metadata has not been configured")
+    if not url or not expected_digest:
+        raise ValueError("Model URL and SHA-256 digest are required")
 
     with tempfile.TemporaryDirectory() as temporary_dir:
         archive = Path(temporary_dir) / "model.tar.gz"

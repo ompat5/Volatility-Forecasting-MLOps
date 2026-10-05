@@ -100,5 +100,5 @@ docker run --rm \
 
 CI exercises three modes with the same image: AAPL-only default, opt-in global
 MLflow, and explicit global ONNX. The ONNX smoke test requires all 34 finite,
-positive forecasts. Monitoring, dashboard, immutable release, and production
-cutover remain later gates.
+positive forecasts. Global candidate monitoring is the next completed gate;
+dashboard, immutable release, and production cutover remain later gates.

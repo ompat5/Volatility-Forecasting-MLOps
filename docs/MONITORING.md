@@ -1,8 +1,12 @@
 # Monitoring design
 
 Phase 5 monitors the deployed **AAPL** LSTM. The project has a 35-ticker data
-basket, but the current registered model was trained on AAPL only; the monitor
-does not imply multi-ticker model coverage that does not yet exist.
+basket, but the deployed production model was trained on AAPL only; this
+workflow remains the production monitor during the global-candidate migration.
+
+The separate global candidate monitor is documented in
+[`GLOBAL_MONITORING.md`](GLOBAL_MONITORING.md). It does not replace this AAPL
+production workflow.
 
 ## Daily pipeline
 
