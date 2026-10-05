@@ -1,0 +1,301 @@
+{
+  "artifact_role": "global_candidate_onnx_fp32_benchmark",
+  "artifacts": {
+    "onnx_export_manifest": {
+      "path": "global_model/optimized/global_volatility_lstm_fp32.json",
+      "sha256": "0a4a174842f44791f589ce6c38fce47894b1e6443e8195abf5db9c81a6adb6fe"
+    },
+    "onnx_fp32": {
+      "path": "global_model/optimized/global_volatility_lstm_fp32.onnx",
+      "sha256": "67828a1c40a8c9f6c4b0fc3dee6597b3ee01a35fb2f58a305b9c6224dedb9fc0",
+      "size_bytes": 87579
+    },
+    "pytorch_state": {
+      "path": "global_model/artifacts/model_state.pt",
+      "sha256": "3c43708c2d644ab2b1f7d8910ef851f68e768e8ec323f9e25d501184e8762fb2",
+      "size_bytes": 87856
+    },
+    "source_manifest": {
+      "path": "global_model/artifacts/manifest.json",
+      "sha256": "61a092ee88b6da69bdbb2d34bf850048e2a4278b4ad979846b00937825b21e58"
+    }
+  },
+  "config": {
+    "as_of_end": "2026-06-26T00:00:00",
+    "as_of_start": "2026-06-26T00:00:00",
+    "context_symbol": "^VIX",
+    "core_features_shape": [
+      34,
+      30,
+      6
+    ],
+    "core_iterations": 1000,
+    "core_ticker_ids_shape": [
+      34
+    ],
+    "core_warmup": 100,
+    "end_to_end_iterations": 100,
+    "end_to_end_warmup": 5,
+    "input_rows": 4200,
+    "target_count": 34
+  },
+  "environment": {
+    "cpu_threads_per_runtime": 1,
+    "machine": "x86_64",
+    "onnx_providers": [
+      "CPUExecutionProvider"
+    ],
+    "onnxruntime": "1.19.2",
+    "python": "3.12.13",
+    "system": "Darwin",
+    "torch": "2.2.2"
+  },
+  "generated_at_utc": "2026-10-04T19:01:06.049539+00:00",
+  "latency_ms": {
+    "core": {
+      "onnx_fp32": {
+        "iterations": 1000,
+        "max_ms": 1.351254,
+        "median_ms": 0.7304455,
+        "min_ms": 0.693932,
+        "p95_ms": 0.9156344
+      },
+      "pytorch": {
+        "iterations": 1000,
+        "max_ms": 2.971415,
+        "median_ms": 1.8345335,
+        "min_ms": 1.77807,
+        "p95_ms": 2.208516699999999
+      }
+    },
+    "end_to_end": {
+      "onnx_fp32": {
+        "iterations": 100,
+        "max_ms": 231.773786,
+        "median_ms": 146.78714150000002,
+        "min_ms": 143.674435,
+        "p95_ms": 162.68784865
+      },
+      "pytorch": {
+        "iterations": 100,
+        "max_ms": 253.226075,
+        "median_ms": 147.6554575,
+        "min_ms": 144.653813,
+        "p95_ms": 164.09699944999997
+      }
+    }
+  },
+  "parity": {
+    "all_target_embeddings_covered": true,
+    "max_absolute_difference": 5.960464477539063e-08,
+    "max_relative_difference": 2.0750299712141467e-07,
+    "mean_absolute_difference": 1.57777000876034e-08,
+    "per_ticker": [
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.24388228356838226,
+        "pytorch_forecast": 0.24388225376605988,
+        "ticker": "AAPL"
+      },
+      {
+        "absolute_difference": 5.960464477539063e-08,
+        "onnx_fp32_forecast": 0.28724709153175354,
+        "pytorch_forecast": 0.2872471511363983,
+        "ticker": "MSFT"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.3601206839084625,
+        "pytorch_forecast": 0.36012065410614014,
+        "ticker": "NVDA"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.26522621512413025,
+        "pytorch_forecast": 0.26522621512413025,
+        "ticker": "GOOGL"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.31183382868766785,
+        "pytorch_forecast": 0.31183382868766785,
+        "ticker": "META"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.2770371437072754,
+        "pytorch_forecast": 0.277037113904953,
+        "ticker": "AMZN"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.3588883578777313,
+        "pytorch_forecast": 0.3588883578777313,
+        "ticker": "CRM"
+      },
+      {
+        "absolute_difference": 5.960464477539063e-08,
+        "onnx_fp32_forecast": 0.4011896848678589,
+        "pytorch_forecast": 0.40118974447250366,
+        "ticker": "ORCL"
+      },
+      {
+        "absolute_difference": 1.4901161193847656e-08,
+        "onnx_fp32_forecast": 0.19470767676830292,
+        "pytorch_forecast": 0.19470766186714172,
+        "ticker": "JPM"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.18234895169734955,
+        "pytorch_forecast": 0.18234895169734955,
+        "ticker": "BAC"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.26723283529281616,
+        "pytorch_forecast": 0.26723286509513855,
+        "ticker": "GS"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.2601754069328308,
+        "pytorch_forecast": 0.2601754069328308,
+        "ticker": "MS"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.18287935853004456,
+        "pytorch_forecast": 0.18287938833236694,
+        "ticker": "V"
+      },
+      {
+        "absolute_difference": 1.4901161193847656e-08,
+        "onnx_fp32_forecast": 0.20288093388080597,
+        "pytorch_forecast": 0.20288094878196716,
+        "ticker": "UNH"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.1548209935426712,
+        "pytorch_forecast": 0.1548210233449936,
+        "ticker": "JNJ"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.1936175376176834,
+        "pytorch_forecast": 0.1936175376176834,
+        "ticker": "PFE"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.24819397926330566,
+        "pytorch_forecast": 0.24819400906562805,
+        "ticker": "LLY"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.23567155003547668,
+        "pytorch_forecast": 0.2356715202331543,
+        "ticker": "XOM"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.23276068270206451,
+        "pytorch_forecast": 0.23276068270206451,
+        "ticker": "CVX"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.3347542881965637,
+        "pytorch_forecast": 0.33475425839424133,
+        "ticker": "CAT"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.23483014106750488,
+        "pytorch_forecast": 0.23483017086982727,
+        "ticker": "GE"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.2845097780227661,
+        "pytorch_forecast": 0.2845097780227661,
+        "ticker": "BA"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.1936396062374115,
+        "pytorch_forecast": 0.1936396360397339,
+        "ticker": "WMT"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.2097850739955902,
+        "pytorch_forecast": 0.2097850739955902,
+        "ticker": "HD"
+      },
+      {
+        "absolute_difference": 1.4901161193847656e-08,
+        "onnx_fp32_forecast": 0.1706465482711792,
+        "pytorch_forecast": 0.170646533370018,
+        "ticker": "MCD"
+      },
+      {
+        "absolute_difference": 1.4901161193847656e-08,
+        "onnx_fp32_forecast": 0.17006894946098328,
+        "pytorch_forecast": 0.17006896436214447,
+        "ticker": "PG"
+      },
+      {
+        "absolute_difference": 2.9802322387695312e-08,
+        "onnx_fp32_forecast": 0.14892219007015228,
+        "pytorch_forecast": 0.14892221987247467,
+        "ticker": "KO"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.2090233862400055,
+        "pytorch_forecast": 0.2090233862400055,
+        "ticker": "DIS"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.13221855461597443,
+        "pytorch_forecast": 0.13221855461597443,
+        "ticker": "XLF"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.2252114862203598,
+        "pytorch_forecast": 0.2252114862203598,
+        "ticker": "XLE"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.22797444462776184,
+        "pytorch_forecast": 0.22797444462776184,
+        "ticker": "XLK"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.13355539739131927,
+        "pytorch_forecast": 0.13355539739131927,
+        "ticker": "XLV"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.16681180894374847,
+        "pytorch_forecast": 0.16681180894374847,
+        "ticker": "XLI"
+      },
+      {
+        "absolute_difference": 0.0,
+        "onnx_fp32_forecast": 0.12679189443588257,
+        "pytorch_forecast": 0.12679189443588257,
+        "ticker": "SPY"
+      }
+    ]
+  },
+  "schema_version": 1
+}

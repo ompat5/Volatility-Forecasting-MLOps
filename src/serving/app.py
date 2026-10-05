@@ -18,6 +18,7 @@ from src.serving.global_api import (
     validate_global_forecaster,
     validated_global_predictions,
 )
+from src.serving.global_onnx_forecaster import GlobalONNXVolatilityForecaster
 from src.serving.onnx_forecaster import ONNXVolatilityForecaster
 
 
@@ -72,19 +73,63 @@ def _load_forecaster():
 
 def _load_global_forecaster():
     """Load the opt-in global candidate without changing the AAPL default."""
-    model_uri = os.getenv("GLOBAL_MODEL_URI")
-    if model_uri is None or not model_uri.strip():
-        return None
-    model_uri = model_uri.strip()
-    if model_uri.startswith("models:/"):
-        expected_registry_uri = r"models:/global-volatility-lstm/[1-9]\d*"
-        if re.fullmatch(expected_registry_uri, model_uri) is None:
+    backend = os.getenv("GLOBAL_MODEL_BACKEND", "mlflow").lower()
+    if backend == "mlflow":
+        model_uri = os.getenv("GLOBAL_MODEL_URI")
+        if model_uri is None or not model_uri.strip():
+            return None
+        model_uri = model_uri.strip()
+        if model_uri.startswith("models:/"):
+            expected_registry_uri = r"models:/global-volatility-lstm/[1-9]\d*"
+            if re.fullmatch(expected_registry_uri, model_uri) is None:
+                raise ValueError(
+                    "Registry-backed GLOBAL_MODEL_URI must select an explicit "
+                    "numeric global-volatility-lstm version"
+                )
+            mlflow.set_tracking_uri(f"sqlite:///{REPO_ROOT / 'mlflow.db'}")
+        model = mlflow.pyfunc.load_model(model_uri)
+    elif backend == "onnx":
+        if os.getenv("GLOBAL_MODEL_URI"):
             raise ValueError(
-                "Registry-backed GLOBAL_MODEL_URI must select an explicit numeric "
-                "global-volatility-lstm version"
+                "GLOBAL_MODEL_URI must be unset when GLOBAL_MODEL_BACKEND='onnx'"
             )
-        mlflow.set_tracking_uri(f"sqlite:///{REPO_ROOT / 'mlflow.db'}")
-    model = mlflow.pyfunc.load_model(model_uri)
+        artifact_dir = REPO_ROOT / "global_model"
+        model = GlobalONNXVolatilityForecaster(
+            Path(
+                os.getenv(
+                    "GLOBAL_ONNX_MODEL_PATH",
+                    artifact_dir
+                    / "optimized"
+                    / "global_volatility_lstm_fp32.onnx",
+                )
+            ),
+            Path(
+                os.getenv(
+                    "GLOBAL_ONNX_SCALER_PATH",
+                    artifact_dir / "artifacts" / "scaler.pkl",
+                )
+            ),
+            Path(
+                os.getenv(
+                    "GLOBAL_ONNX_ARTIFACT_MANIFEST_PATH",
+                    artifact_dir / "artifacts" / "manifest.json",
+                )
+            ),
+            Path(
+                os.getenv(
+                    "GLOBAL_ONNX_EXPORT_MANIFEST_PATH",
+                    artifact_dir
+                    / "optimized"
+                    / "global_volatility_lstm_fp32.json",
+                )
+            ),
+            threads=int(os.getenv("GLOBAL_ONNX_NUM_THREADS", "1")),
+        )
+    else:
+        raise ValueError(
+            f"Unsupported GLOBAL_MODEL_BACKEND={backend!r}; expected 'mlflow' "
+            "or 'onnx'"
+        )
     validate_global_forecaster(model)
     return model
 
@@ -137,7 +182,10 @@ def predict_global(request: GlobalPredictRequest):
     if model is None:
         raise HTTPException(
             status_code=503,
-            detail="Global model is not configured; set GLOBAL_MODEL_URI to opt in",
+            detail=(
+                "Global model is not configured; set GLOBAL_MODEL_URI or opt into "
+                "GLOBAL_MODEL_BACKEND='onnx'"
+            ),
         )
     frame = global_request_frame(request)
     try:

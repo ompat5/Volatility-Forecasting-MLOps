@@ -22,6 +22,104 @@ GLOBAL_REGISTERED_MODEL_NAME = "global-volatility-lstm"
 REQUIRED_BENCHMARK_MODELS = {"global_lstm", "naive", "ewma", "garch"}
 
 
+def validate_global_artifact_manifest(manifest: dict) -> None:
+    """Fail fast when an artifact cannot satisfy the inference contract."""
+    if manifest.get("schema_version") != 1:
+        raise ValueError("Global artifact schema_version must be 1")
+    if manifest.get("artifact_role") != "global_candidate":
+        raise ValueError("Global artifact role must be 'global_candidate'")
+    if manifest.get("registered_model_name") != GLOBAL_REGISTERED_MODEL_NAME:
+        raise ValueError("Global artifact registered-model name is incompatible")
+
+    preprocessing = manifest.get("preprocessing", {})
+    if preprocessing.get("feature_columns") != GLOBAL_FEATURE_COLS:
+        raise ValueError("Global artifact feature schema is incompatible")
+    seq_len = preprocessing.get("seq_len")
+    if not isinstance(seq_len, int) or seq_len <= 0:
+        raise ValueError("Global artifact seq_len must be positive")
+
+    target = manifest.get("target", {})
+    if target.get("column") != TARGET_COL or target.get("transform") != "log":
+        raise ValueError("Global artifact target contract is incompatible")
+    if (
+        not isinstance(target.get("horizon_sessions"), int)
+        or target["horizon_sessions"] <= 0
+    ):
+        raise ValueError("Global artifact horizon must be positive")
+
+    universe = manifest.get("universe", {})
+    raw_targets = universe.get("targets")
+    raw_context = universe.get("context")
+    ticker_to_id = universe.get("ticker_to_id")
+    if not isinstance(raw_targets, list) or not raw_targets:
+        raise ValueError("Global artifact must contain forecast targets")
+    if any(
+        not isinstance(item, dict)
+        or not isinstance(item.get("symbol"), str)
+        or not item.get("symbol")
+        or not isinstance(item.get("group"), str)
+        or not item.get("group")
+        for item in raw_targets
+    ):
+        raise ValueError("Global artifact target entries are invalid")
+    if not isinstance(raw_context, list) or any(
+        not isinstance(item, dict) for item in raw_context
+    ):
+        raise ValueError("Global artifact context entries are invalid")
+    target_symbols = [item.get("symbol") for item in raw_targets]
+    if len(set(target_symbols)) != len(target_symbols):
+        raise ValueError("Global artifact target symbols must be unique")
+    if not isinstance(ticker_to_id, dict):
+        raise ValueError("Global artifact must contain a ticker vocabulary")
+    if list(ticker_to_id) != target_symbols:
+        raise ValueError("Global artifact ticker vocabulary order is incompatible")
+    if list(ticker_to_id.values()) != list(range(len(target_symbols))):
+        raise ValueError("Global artifact ticker IDs must be contiguous from zero")
+    implied_volatility = [
+        item.get("symbol")
+        for item in raw_context or []
+        if item.get("role") == "implied_volatility"
+    ]
+    if len(implied_volatility) != 1:
+        raise ValueError("Global artifact needs one implied-volatility context series")
+    input_contract = manifest.get("input_contract", {})
+    if input_contract.get("context_required") != implied_volatility[0]:
+        raise ValueError("Global artifact context input contract is incompatible")
+    if input_contract.get("target_subset_allowed") is not True:
+        raise ValueError("Global artifact must allow known target subsets")
+
+    architecture = manifest.get("architecture", {})
+    positive_dimensions = (
+        "input_size",
+        "embedding_dim",
+        "hidden_size",
+        "num_layers",
+    )
+    if any(
+        not isinstance(architecture.get(field), int) or architecture[field] <= 0
+        for field in positive_dimensions
+    ):
+        raise ValueError("Global artifact model dimensions must be positive")
+    if architecture["input_size"] != len(GLOBAL_FEATURE_COLS):
+        raise ValueError("Global artifact model input size is incompatible")
+    if architecture.get("num_tickers") != len(target_symbols):
+        raise ValueError("Global artifact model ticker count is incompatible")
+    dropout = architecture.get("dropout")
+    if not isinstance(dropout, (float, int)) or not 0.0 <= float(dropout) < 1.0:
+        raise ValueError("Global artifact dropout must be in [0, 1)")
+
+    if input_contract.get("columns") != ["date", "ticker", "adjusted_close"]:
+        raise ValueError("Global artifact input contract is incompatible")
+    output_contract = manifest.get("output_contract", {})
+    if output_contract.get("columns") != [
+        "ticker",
+        "as_of_date",
+        "horizon_sessions",
+        "forecast",
+    ]:
+        raise ValueError("Global artifact output contract is incompatible")
+
+
 def sha256_file(path: Path | str) -> str:
     path = Path(path)
     digest = hashlib.sha256()

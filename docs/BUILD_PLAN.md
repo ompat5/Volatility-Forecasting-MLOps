@@ -342,10 +342,32 @@ universe contract before the production default changes.
   in AAPL-only mode and in opt-in global mode, then requires one finite positive
   forecast for every target plus direct pyfunc/API parity.
 
-**Next migration step:** export and benchmark the global LSTM core in FP32 ONNX,
-add parity coverage across all ticker embeddings, and introduce it only as an
-explicit global backend. Keep the existing AAPL endpoint and production default
-unchanged until ONNX, monitoring, dashboard, and immutable-release gates pass.
+**Global migration Phase 6 — FP32 ONNX optimization (implemented):**
+- The exported graph contains the shared LSTM, ticker embedding, head, and
+  exponential output transform. It accepts dynamic batches of scaled
+  `(30, 6)` windows plus INT64 ticker IDs and still produces strictly positive
+  volatility forecasts.
+- Raw-price validation, feature construction, the fitted scaler, ticker order,
+  and response construction remain shared Python code. ONNX changes runtime,
+  not preprocessing or model semantics.
+- A checksummed export sidecar binds the graph to the source artifact manifest,
+  model state, scaler, horizon, target count, and parity evidence. All 34 ticker
+  embeddings must match PyTorch before export succeeds; the real candidate's
+  maximum absolute difference was `5.96e-08`.
+- On the recorded one-thread 34-target run, median core latency fell from
+  `1.8345 ms` to `0.7304 ms` (2.5×), while full long-form request latency moved
+  only from `147.6555 ms` to `146.7871 ms` (~0.6%). Feature construction and
+  scaling dominate the application path.
+- `GLOBAL_MODEL_BACKEND=onnx` is an explicit opt-in and conflicts with a set
+  `GLOBAL_MODEL_URI`. The AAPL backend/default and global MLflow default remain
+  unchanged. CI exercises all three container modes.
+- Reproduction instructions and trade-offs are in `docs/GLOBAL_ONNX.md`; the
+  machine-readable report is `benchmarks/global_onnx_fp32.json`.
+
+**Next migration step:** extend drift, regime, and delayed-error monitoring to
+all 34 targets with aggregate, per-ticker, and asset-group views. Keep the AAPL
+production default unchanged until monitoring, dashboard, immutable-release,
+and final cutover gates pass.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,

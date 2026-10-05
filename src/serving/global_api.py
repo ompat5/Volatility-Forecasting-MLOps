@@ -42,7 +42,14 @@ def validate_global_forecaster(model) -> None:
     """Require the loaded artifact to match the complete repository contract."""
     universe = load_universe(DEFAULT_TICKERS_CONFIG)
     config = load_global_config()
-    model_metadata = getattr(getattr(model, "metadata", None), "metadata", None)
+    direct_metadata = getattr(model, "global_metadata", None)
+    if direct_metadata is not None:
+        model_metadata = direct_metadata
+        runtime = model
+    else:
+        model_metadata = getattr(
+            getattr(model, "metadata", None), "metadata", None
+        )
     expected_metadata = {
         "artifact_role": "global_candidate",
         "target_count": len(universe.target_symbols),
@@ -52,21 +59,22 @@ def validate_global_forecaster(model) -> None:
         model_metadata.get(key) != value for key, value in expected_metadata.items()
     ):
         raise ValueError(
-            "GLOBAL_MODEL_URI does not identify a compatible global candidate"
+            "Configured global runtime is not a compatible global candidate"
         )
-    try:
-        python_model = model.unwrap_python_model()
-    except (AttributeError, NotImplementedError) as exc:
-        raise ValueError(
-            "GLOBAL_MODEL_URI must load an inspectable MLflow pyfunc"
-        ) from exc
-    if tuple(getattr(python_model, "target_symbols", ())) != universe.target_symbols:
+    if direct_metadata is None:
+        try:
+            runtime = model.unwrap_python_model()
+        except (AttributeError, NotImplementedError) as exc:
+            raise ValueError(
+                "GLOBAL_MODEL_URI must load an inspectable MLflow pyfunc"
+            ) from exc
+    if tuple(getattr(runtime, "target_symbols", ())) != universe.target_symbols:
         raise ValueError("Global artifact target universe is incompatible")
-    if getattr(python_model, "context_symbol", None) != universe.context_symbol(
+    if getattr(runtime, "context_symbol", None) != universe.context_symbol(
         "implied_volatility"
     ):
         raise ValueError("Global artifact context universe is incompatible")
-    if getattr(python_model, "horizon", None) != config.data.horizon:
+    if getattr(runtime, "horizon", None) != config.data.horizon:
         raise ValueError("Global artifact forecast horizon is incompatible")
 
 

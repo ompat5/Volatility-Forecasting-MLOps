@@ -87,8 +87,26 @@ The global artifact bundles its weights, scaler, ticker vocabulary, feature
 schema, configuration, and benchmark evidence. Its long-form raw-price contract
 and promotion safeguards are documented in
 [`docs/GLOBAL_MODEL.md`](docs/GLOBAL_MODEL.md). `POST /predict/global` loads only
-when `GLOBAL_MODEL_URI` is explicitly configured; the existing AAPL
+with an explicit global MLflow URI or ONNX backend; the existing AAPL
 `POST /predict`, `/health`, model URI, and backend defaults remain unchanged.
+
+### Global FP32 ONNX candidate (not production)
+
+The global LSTM core now has a validated FP32 ONNX export with dynamic batching
+across all 34 ticker embeddings. Raw-price features and scaling remain in shared
+Python code. On the recorded one-thread run, ONNX reduced median 34-target core
+latency from `1.8345 ms` to `0.7304 ms` (2.5×), but full request latency moved
+only from `147.6555 ms` to `146.7871 ms` (~0.6%) because preprocessing dominates.
+Maximum PyTorch/ONNX forecast difference was `5.96e-08`.
+
+| Path | PyTorch median | ONNX FP32 median |
+|---|---:|---:|
+| Scaled `(34, 30, 6)` tensors + ticker IDs | 1.8345 ms | **0.7304 ms** |
+| 4,200 raw-price rows → 34 forecasts | 147.6555 ms | **146.7871 ms** |
+
+See [`docs/GLOBAL_ONNX.md`](docs/GLOBAL_ONNX.md) for the design and runbook and
+[`benchmarks/global_onnx_fp32.json`](benchmarks/global_onnx_fp32.json) for the
+complete hashes, environment, timings, and per-ticker parity evidence.
 
 ### FP32 ONNX benchmark
 
@@ -146,6 +164,8 @@ uv run python -m scripts.build_global_splits
 uv run python -m scripts.evaluate_global_model
 uv run python -m scripts.train_global
 uv run python -m scripts.export_global_model --version 3  # use the printed version
+uv run python -m scripts.export_global_onnx
+uv run python -m scripts.benchmark_global_inference
 ```
 
 Train and register the current AAPL production model:
@@ -174,8 +194,16 @@ curl http://127.0.0.1:8000/health/global
 `{date, ticker, adjusted_close}` records. Include `^VIX` and one or more known
 targets; the response contains one positive five-session forecast per target.
 The service validates the loaded artifact against the exact 34-target universe
-at startup. Omitting `GLOBAL_MODEL_URI` leaves this endpoint unavailable with
+at startup. Without a global URI or explicit ONNX backend, this endpoint returns
 HTTP 503 while the AAPL service continues normally.
+
+After exporting the global graph, explicitly select its ONNX runtime with
+`GLOBAL_MODEL_URI` unset:
+
+```bash
+GLOBAL_MODEL_BACKEND=onnx \
+  uv run uvicorn src.serving.app:app --port 8000
+```
 
 Or explicitly opt into the FP32 ONNX backend after exporting the local model:
 
@@ -206,6 +234,9 @@ docker run --rm \
   -v "$(pwd)/global_model:/app/global_model:ro" \
   -p 8000:8000 volatility-forecaster
 ```
+
+Use the same mount with `-e GLOBAL_MODEL_BACKEND=onnx` instead of
+`GLOBAL_MODEL_URI` to exercise the explicit global ONNX path.
 
 To exercise the optimized backend in that image:
 
@@ -250,19 +281,20 @@ thresholds, artifacts, and local monitoring commands.
 Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
 FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
 opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
-implemented. Global migration Phases 1–5 now add the complete pooled-model path
-through opt-in API and container validation without changing that production
-default. The current branch has **170 tests**. Remaining global work is ONNX,
-monitoring, dashboard, immutable release, and eventual cutover; final portfolio
-polish follows the migration.
+implemented. Global migration Phases 1–6 now add the pooled-model path through
+opt-in API, FP32 ONNX export, all-embedding parity, measured benchmarking, and
+explicit ONNX serving without changing that production default. Remaining
+global work is monitoring, dashboard, immutable release, and eventual cutover;
+final portfolio polish follows the migration. The current branch has **178
+tests**.
 
 ### Continuous integration
 
-Every push and pull request runs Ruff, the pytest suite, a Docker build, and two
-end-to-end container smoke tests. The first uses the deterministic AAPL fixture
-and proves global serving is disabled by default. The second mounts a separate
-deterministic global fixture and requires all 34 target forecasts. Neither
-fixture is trained or ever published.
+Every push and pull request runs Ruff, the pytest suite, a Docker build, and
+three end-to-end container smoke tests. The first uses the deterministic AAPL
+fixture and proves global serving is disabled by default. The other two mount a
+separate deterministic global fixture and require all 34 forecasts through the
+MLflow and explicit ONNX runtimes. Neither fixture is trained or ever published.
 
 Production images continue to use an explicitly exported registered model:
 

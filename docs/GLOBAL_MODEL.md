@@ -149,5 +149,22 @@ also succeeded for an AAPL/SPY subset from `/tmp` with the repository absent
 from `PYTHONPATH`.
 
 The real candidate and the deterministic CI artifact both pass direct-pyfunc and
-FastAPI parity checks. ONNX, monitoring, scheduled jobs, the dashboard, and the
-production default remain AAPL-only until their later migration gates pass.
+FastAPI parity checks.
+
+## Phase 6: explicit FP32 ONNX runtime
+
+The candidate's positive-output neural-network core can now be exported to a
+two-input FP32 ONNX graph and selected with `GLOBAL_MODEL_BACKEND=onnx`.
+Preprocessing and the fitted scaler remain shared Python code. Export verifies
+every ticker embedding against PyTorch and writes a checksummed sidecar bound to
+the exact source artifact.
+
+On the recorded 34-target one-thread run, ONNX reduced median core latency from
+1.8345 ms to 0.7304 ms (2.5×) but reduced full raw-history latency only from
+147.6555 ms to 146.7871 ms (~0.6%). Maximum forecast difference was `5.96e-08`.
+See [`docs/GLOBAL_ONNX.md`](GLOBAL_ONNX.md) for the export, benchmark, and serving
+runbook and [`benchmarks/global_onnx_fp32.json`](../benchmarks/global_onnx_fp32.json)
+for the complete evidence.
+
+Monitoring, scheduled jobs, the dashboard, immutable release, and the production
+default remain AAPL-only until their later migration gates pass.

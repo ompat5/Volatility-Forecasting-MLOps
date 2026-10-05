@@ -94,6 +94,7 @@ def client(monkeypatch):
     # tests never touch the real registry. Using TestClient as a context manager runs lifespan.
     monkeypatch.setattr("mlflow.pyfunc.load_model", lambda uri: _StubModel())
     monkeypatch.setenv("MODEL_BACKEND", "mlflow")
+    monkeypatch.delenv("GLOBAL_MODEL_BACKEND", raising=False)
     monkeypatch.delenv("GLOBAL_MODEL_URI", raising=False)
     with TestClient(app) as c:
         yield c
@@ -296,4 +297,19 @@ def test_global_loader_rejects_floating_registry_version(monkeypatch):
     )
 
     with pytest.raises(ValueError, match="explicit numeric"):
+        app_module._load_global_forecaster()
+
+
+def test_global_loader_rejects_unknown_backend(monkeypatch):
+    monkeypatch.setenv("GLOBAL_MODEL_BACKEND", "unknown")
+
+    with pytest.raises(ValueError, match="Unsupported GLOBAL_MODEL_BACKEND"):
+        app_module._load_global_forecaster()
+
+
+def test_global_onnx_backend_rejects_ambiguous_mlflow_uri(monkeypatch):
+    monkeypatch.setenv("GLOBAL_MODEL_BACKEND", "onnx")
+    monkeypatch.setenv("GLOBAL_MODEL_URI", "/models/global")
+
+    with pytest.raises(ValueError, match="must be unset"):
         app_module._load_global_forecaster()

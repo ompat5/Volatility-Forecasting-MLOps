@@ -26,6 +26,50 @@ class GlobalInferenceBatch:
     as_of_dates: tuple[pd.Timestamp, ...]
 
 
+def scale_global_inference_batch(
+    batch: GlobalInferenceBatch,
+    scaler,
+) -> np.ndarray:
+    """Apply the artifact scaler and return a contiguous FP32 model tensor."""
+    n_targets, seq_len, n_features = batch.features.shape
+    if n_features != len(GLOBAL_FEATURE_COLS):
+        raise ValueError("Global inference batch feature count is incompatible")
+    scaled = scaler.transform(
+        pd.DataFrame(
+            batch.features.reshape(n_targets * seq_len, n_features),
+            columns=GLOBAL_FEATURE_COLS,
+        )
+    ).reshape(n_targets, seq_len, n_features)
+    array = np.asarray(scaled, dtype=np.float32)
+    if not np.isfinite(array).all():
+        raise ValueError("Scaled global inference features must be finite")
+    return np.ascontiguousarray(array)
+
+
+def build_global_forecast_frame(
+    batch: GlobalInferenceBatch,
+    forecasts: np.ndarray,
+    *,
+    horizon: int,
+) -> pd.DataFrame:
+    """Validate core output and restore the public tabular response contract."""
+    values = np.asarray(forecasts, dtype=float).reshape(-1)
+    if horizon <= 0:
+        raise ValueError("Forecast horizon must be positive")
+    if values.shape != (len(batch.tickers),):
+        raise ValueError("Global forecast count does not match requested targets")
+    if not np.isfinite(values).all() or (values <= 0).any():
+        raise ValueError("Global artifact produced invalid volatility forecasts")
+    return pd.DataFrame(
+        {
+            "ticker": batch.tickers,
+            "as_of_date": pd.DatetimeIndex(batch.as_of_dates),
+            "horizon_sessions": horizon,
+            "forecast": values,
+        }
+    )
+
+
 def _validate_raw_prices(
     model_input: pd.DataFrame,
     *,

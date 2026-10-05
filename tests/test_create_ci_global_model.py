@@ -1,13 +1,11 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-import mlflow.pyfunc
 import pandas as pd
 import pytest
 
 from scripts.create_ci_global_model import (
     FIXTURE_FORECAST,
-    build_ci_global_prices,
     create_ci_global_model,
 )
 import src.serving.app as app_module
@@ -20,16 +18,8 @@ class _LegacyStub:
         return 0.25
 
 
-@pytest.fixture(scope="module")
-def global_fixture(tmp_path_factory) -> tuple[Path, object, pd.DataFrame]:
-    output = create_ci_global_model(
-        tmp_path_factory.mktemp("ci_global") / "model"
-    )
-    return output, mlflow.pyfunc.load_model(str(output)), build_ci_global_prices()
-
-
-def test_ci_global_model_covers_the_complete_universe(global_fixture):
-    output, loaded, prices = global_fixture
+def test_ci_global_model_covers_the_complete_universe(global_ci_fixture):
+    output, loaded, prices = global_ci_fixture
     universe = load_universe(DEFAULT_TICKERS_CONFIG)
 
     forecasts = loaded.predict(prices)
@@ -49,10 +39,10 @@ def test_ci_global_model_covers_the_complete_universe(global_fixture):
 
 
 def test_global_api_matches_direct_pyfunc_predictions(
-    global_fixture,
+    global_ci_fixture,
     monkeypatch,
 ):
-    output, loaded, prices = global_fixture
+    output, loaded, prices = global_ci_fixture
     direct = loaded.predict(prices)
 
     def fake_load_model(uri):
@@ -85,10 +75,10 @@ def test_global_api_matches_direct_pyfunc_predictions(
 
 
 def test_global_api_maps_missing_vix_to_validation_error(
-    global_fixture,
+    global_ci_fixture,
     monkeypatch,
 ):
-    output, loaded, prices = global_fixture
+    output, loaded, prices = global_ci_fixture
 
     def fake_load_model(uri):
         return loaded if uri == str(output) else _LegacyStub()
