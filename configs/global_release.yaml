@@ -1,0 +1,14 @@
+# Immutable candidate delivery. This does not make the global model the
+# production default; it pins the exact archive used by candidate monitoring
+# and the separate global dashboard.
+schema_version: 1
+
+release:
+  version: global-volatility-lstm-v3-candidate
+  role: global_candidate
+  tag: global-volatility-lstm-v3-candidate
+  asset_name: global-volatility-lstm-v3-candidate.tar.gz
+  url: https://github.com/ompat5/Volatility-Forecasting-MLOps/releases/download/global-volatility-lstm-v3-candidate/global-volatility-lstm-v3-candidate.tar.gz
+  sha256: c40b48f186a9255f6afcfffde1a5ca02f0ff2379ab9d68da87d0b024d353ee0a
+  registered_model_name: global-volatility-lstm
+  registered_model_version: 3

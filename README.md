@@ -57,7 +57,9 @@ The repository caches 34 forecast targets plus VIX context. A global-model
 migration is in progress: its pooled LSTM candidate has been evaluated,
 packaged, optimized, served behind an opt-in route, and given a separate
 candidate monitor and candidate-only dashboard. It is not promoted, and its
-schedule remains disabled until the immutable-release and cutover gates pass.
+immutable candidate release does not change any production default. Its
+candidate schedule becomes active only after the global branch is deliberately
+merged; production cutover remains a separate review.
 
 ### Global candidate benchmark (not production)
 
@@ -299,8 +301,9 @@ GLOBAL_DASHBOARD_USE_CACHED_PRICES=1 \
 The candidate page loads one synchronized 34-target-plus-VIX snapshot, then
 slices it instantly by ticker and group. It includes fleet/ticker monitoring
 and ticker/group/portfolio final-holdout comparisons. It is intentionally not
-the public default and requires an exported `global_model/` candidate. See the
-[global dashboard runbook](docs/GLOBAL_DASHBOARD.md).
+the public default. It uses an explicit/local candidate when supplied and
+otherwise downloads the checksum-pinned prerelease. See the [global dashboard
+runbook](docs/GLOBAL_DASHBOARD.md).
 
 Run the global candidate monitor with the exported `global_model/` snapshot and
 cached all-symbol histories:
@@ -321,13 +324,15 @@ and local commands.
 Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
 FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
 opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
-implemented. Global migration Phases 1–8 now add the pooled-model path through
+implemented. Global migration Phases 1–9 now add the pooled-model path through
 opt-in API, FP32 ONNX export, all-embedding parity, measured benchmarking,
 explicit ONNX serving, and full-universe candidate monitoring without changing
 that production default. Global migration Phase 8 adds the complete candidate
 dashboard and group-level views as a separate entrypoint. Remaining global work
-is the immutable release and eventual cutover; final portfolio polish follows
-the migration. The current branch has **192 tests**.
+includes a deterministic, checksum-pinned immutable candidate release and
+shared download validation. Remaining global work is the explicit cutover
+review; final portfolio polish follows the migration. The current branch has
+**199 tests**.
 
 ### Continuous integration
 
@@ -352,10 +357,14 @@ drift, volatility-regime state, and delayed rolling forecast error. Predictions,
 the input snapshot, and Markdown/JSON reports are retained as workflow artifacts.
 
 A separate global-candidate workflow implements the same lifecycle across all
-34 targets with aggregate/group/ticker views and one fleet alert. Its weekday
-schedule is deliberately dormant until an immutable global archive URL and
-SHA-256 are configured; manual candidate runs are available now.
+34 targets with aggregate/group/ticker views and one fleet alert. It downloads
+the immutable URL and SHA-256 pinned in `configs/global_release.yaml`. Its
+weekday candidate schedule takes effect when this branch reaches the default
+branch; manual branch runs provide pre-merge acceptance.
 
 See [docs/MONITORING.md](docs/MONITORING.md) and
 [docs/GLOBAL_MONITORING.md](docs/GLOBAL_MONITORING.md) for thresholds,
 methodology, and local commands.
+
+Release provenance, deterministic packaging, and the download gate are in
+[docs/GLOBAL_RELEASE.md](docs/GLOBAL_RELEASE.md).

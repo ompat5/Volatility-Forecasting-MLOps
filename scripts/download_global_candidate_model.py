@@ -3,21 +3,24 @@
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
-from src.serving.artifacts import download_verified_model
+from src.config import REPO_ROOT
+from src.models.global_release import download_global_release
+
+DEFAULT_RELEASE_CONFIG = REPO_ROOT / "configs" / "global_release.yaml"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default=os.getenv("GLOBAL_MODEL_URL"))
-    parser.add_argument("--sha256", default=os.getenv("GLOBAL_MODEL_SHA256"))
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_RELEASE_CONFIG,
+    )
     parser.add_argument("--output", type=Path, default=Path("global_model"))
     args = parser.parse_args()
-    if not args.url or not args.sha256:
-        parser.error("--url and --sha256 (or matching environment variables) are required")
-    output = download_verified_model(args.url, args.sha256, args.output)
+    output = download_global_release(args.config, args.output)
     print(f"Downloaded verified global candidate to {output}")
 
 

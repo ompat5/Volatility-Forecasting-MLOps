@@ -58,12 +58,14 @@ GLOBAL_DASHBOARD_PRICES_PATH=path/to/latest_prices.parquet \
   uv run streamlit run dashboard/global_app.py
 ```
 
-`GLOBAL_DASHBOARD_MODEL_DIR` may point to an exported candidate snapshot;
-otherwise `global_model/` is used. The directory must contain the model state,
-scaler, and artifact manifest. If both optimized files are absent, the
-dashboard exports and validates FP32 ONNX once. If only one optimized file is
-present, startup fails rather than guessing whether the model and sidecar
-belong together.
+`GLOBAL_DASHBOARD_MODEL_DIR` may point to an exported candidate snapshot. The
+dashboard otherwise prefers a local `global_model/`; when neither exists, it
+downloads and validates the checksum-pinned candidate in
+`configs/global_release.yaml` into temporary storage. The directory must
+contain the model state, scaler, and artifact manifest. If both optimized files
+are absent, the dashboard exports and validates FP32 ONNX once. If only one
+optimized file is present, startup fails rather than guessing whether the model
+and sidecar belong together.
 
 Cached and exact-snapshot modes are visibly labeled **offline replay** and skip
 only the wall-clock age comparison. They retain universe completeness,
@@ -85,8 +87,7 @@ existing `dashboard/app.py` AAPL entrypoint was not modified.
 
 ## Promotion boundary
 
-Dashboard integration completes a candidate lifecycle gate, not promotion.
-The next phase must publish one immutable archive, verify and pin its SHA-256,
-and rerun the dashboard and candidate monitor from that downloaded archive.
-Only then may the candidate schedule be enabled. Changing the production API or
-dashboard default still requires a separate cutover review.
+Dashboard integration and immutable delivery complete candidate lifecycle
+gates, not promotion. The downloaded archive is validated through the same
+dashboard runtime before acceptance. Changing the production API or dashboard
+default still requires a separate cutover review; see `docs/GLOBAL_RELEASE.md`.

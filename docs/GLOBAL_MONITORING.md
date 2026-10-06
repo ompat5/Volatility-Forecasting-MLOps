@@ -123,11 +123,13 @@ itself.
 ## Candidate workflow and promotion gate
 
 `.github/workflows/global-monitoring.yml` supports manual candidate QA and a
-weekday schedule. The schedule is dormant unless the repository variable
-`ENABLE_GLOBAL_MONITORING` is `true`. It also requires an immutable archive URL
-and SHA-256 through `GLOBAL_MODEL_URL` and `GLOBAL_MODEL_SHA256` repository
-variables; manual dispatch may supply them as inputs.
+weekday candidate schedule. Every run downloads the exact URL and SHA-256 in
+`configs/global_release.yaml`; there are no floating versions or repository
+variable overrides. GitHub runs schedules from the default branch, so the new
+schedule becomes active only after the global branch is deliberately merged.
+Manual dispatch on this branch provides the pre-merge acceptance run.
 
-This gate is intentional: Phase 7 does not publish or promote a release. The
-AAPL schedule remains production. The global schedule should be enabled only
-after the later immutable-release review selects the exact candidate archive.
+The AAPL schedule remains the production monitor. The global workflow is
+explicitly candidate-only and does not change the production model, API, or
+dashboard defaults. Release packaging and retrieval are documented in
+`docs/GLOBAL_RELEASE.md`.

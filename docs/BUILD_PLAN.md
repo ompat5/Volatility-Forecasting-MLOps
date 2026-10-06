@@ -406,10 +406,27 @@ universe contract before the production default changes.
   2,074 ledger rows, and 4,080 chart rows. The Streamlit page was exercised end
   to end; details are in `docs/GLOBAL_DASHBOARD.md`.
 
-**Next migration step:** publish and checksum-pin an immutable global candidate
-release, then rerun dashboard and monitoring acceptance from the downloaded
-archive. Only after that gate passes should the scheduled global monitor be
-enabled and an explicit production-cutover review begin.
+**Global migration Phase 9 — immutable candidate release (implemented):**
+- A deterministic packager validates registry version 3, rejects CI fixtures,
+  verifies both MLflow and checksum-bound ONNX runtimes, and normalizes archive
+  metadata. Two real-candidate runs produced the same 334,241-byte archive and
+  SHA-256 `c40b48f186a9255f6afcfffde1a5ca02f0ff2379ab9d68da87d0b024d353ee0a`.
+- `configs/global_release.yaml` pins the exact prerelease tag, asset URL,
+  digest, registered-model name, and numeric source version. No floating alias
+  or repository-variable override is accepted.
+- Download verifies the digest before safe extraction, then repeats registry,
+  artifact, MLflow, and ONNX validation; failures remove the extracted path.
+- The candidate dashboard automatically uses the pinned release when no local
+  model is supplied. Candidate monitoring downloads the same release pin.
+- The candidate workflow owns a weekday schedule without a mutable variable
+  gate. GitHub schedules run only from the default branch, so it becomes active
+  after deliberate merge; manual branch dispatch is the pre-merge acceptance.
+- Packaging, retrieval, schedule boundaries, and the remaining promotion gate
+  are documented in `docs/GLOBAL_RELEASE.md`.
+
+**Next migration step:** conduct an explicit production-cutover review. Do not
+change the API default, public dashboard, AAPL release, or production monitor
+until that review records the operational decision and rollback plan.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,

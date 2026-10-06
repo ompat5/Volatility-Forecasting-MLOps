@@ -285,3 +285,40 @@ def test_global_runtime_rejects_partial_onnx_bundle(tmp_path: Path):
 
     with pytest.raises(FileNotFoundError, match="Incomplete global ONNX bundle"):
         load_global_dashboard_forecaster(tmp_path)
+
+
+def test_global_runtime_downloads_pinned_release_when_directory_is_absent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    model_dir = tmp_path / "downloaded"
+    sentinel = object()
+    downloads = []
+
+    def fake_download(config_path: Path, output: Path):
+        downloads.append((config_path, output))
+        _candidate_files(output)
+        optimized = output / "optimized"
+        optimized.mkdir()
+        (optimized / "global_volatility_lstm_fp32.onnx").touch()
+        (optimized / "global_volatility_lstm_fp32.json").touch()
+        return output
+
+    monkeypatch.setattr(
+        "src.dashboard.global_runtime.download_global_release",
+        fake_download,
+    )
+    monkeypatch.setattr(
+        "src.dashboard.global_runtime.GlobalONNXVolatilityForecaster",
+        lambda *args, **kwargs: sentinel,
+    )
+    monkeypatch.setattr(
+        "src.dashboard.global_runtime.validate_global_forecaster",
+        lambda model: None,
+    )
+
+    result = load_global_dashboard_forecaster(model_dir)
+
+    assert result is sentinel
+    assert len(downloads) == 1
+    assert downloads[0][1] == model_dir

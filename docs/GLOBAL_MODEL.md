@@ -168,5 +168,8 @@ for the complete evidence.
 
 Candidate monitoring now covers all 34 targets at aggregate, asset-group, and
 per-ticker levels; see [`docs/GLOBAL_MONITORING.md`](GLOBAL_MONITORING.md).
-The AAPL scheduled monitor, dashboard, immutable release, and production default
-remain authoritative until their later migration gates pass.
+The exact registry version 3 candidate is also packaged as a checksum-pinned
+GitHub prerelease for the candidate dashboard and monitoring workflow; see
+[`docs/GLOBAL_RELEASE.md`](GLOBAL_RELEASE.md). The AAPL production artifact,
+API/dashboard default, and production monitoring remain authoritative until an
+explicit cutover review.
