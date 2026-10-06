@@ -85,6 +85,10 @@ promotion gate. Reproducible configuration, split boundaries, aggregate/group
 metrics, and per-ticker holdout metrics are in
 [`benchmarks/global_model.json`](benchmarks/global_model.json).
 
+The selected registry version is available as a checksum-pinned
+[global-model candidate prerelease](https://github.com/ompat5/Volatility-Forecasting-MLOps/releases/tag/global-volatility-lstm-v3-candidate).
+It remains non-production pending the explicit cutover review.
+
 The global artifact bundles its weights, scaler, ticker vocabulary, feature
 schema, configuration, and benchmark evidence. Its long-form raw-price contract
 and promotion safeguards are documented in
@@ -332,7 +336,7 @@ dashboard and group-level views as a separate entrypoint. Remaining global work
 includes a deterministic, checksum-pinned immutable candidate release and
 shared download validation. Remaining global work is the explicit cutover
 review; final portfolio polish follows the migration. The current branch has
-**199 tests**.
+**201 tests**.
 
 ### Continuous integration
 

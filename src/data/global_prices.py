@@ -55,18 +55,35 @@ def load_cached_global_prices(
     )
 
 
-def fetch_global_prices(universe: Universe) -> pd.DataFrame:
-    """Refresh every configured series and fail on any missing input."""
+def fetch_global_prices(
+    universe: Universe,
+    *,
+    attempts: int = 2,
+) -> pd.DataFrame:
+    """Refresh every series, retrying transient empties before failing closed."""
+    if attempts <= 0:
+        raise ValueError("Global price refresh attempts must be positive")
     prices: dict[str, pd.Series] = {}
     failures: dict[str, str] = {}
     for symbol in universe.all_symbols:
-        try:
-            frame = fetch_ticker(symbol)
-            series = pd.to_numeric(frame["Adj Close"], errors="coerce").dropna()
-            series.index = normalize_session_index(series.index)
-            prices[symbol] = series.sort_index().astype(float)
-        except Exception as exc:  # noqa: BLE001 - report complete universe failures
-            failures[symbol] = str(exc)
+        last_error: Exception | None = None
+        for _ in range(attempts):
+            try:
+                frame = fetch_ticker(symbol)
+                series = pd.to_numeric(
+                    frame["Adj Close"], errors="coerce"
+                ).dropna()
+                if series.empty:
+                    raise ValueError(
+                        f"Price refresh returned no adjusted closes for {symbol}"
+                    )
+                series.index = normalize_session_index(series.index)
+                prices[symbol] = series.sort_index().astype(float)
+                break
+            except Exception as exc:  # noqa: BLE001 - retry/report every symbol
+                last_error = exc
+        if symbol not in prices:
+            failures[symbol] = f"after {attempts} attempts: {last_error}"
     if failures:
         raise RuntimeError(f"Failed to refresh global price inputs: {failures}")
     return long_prices_from_series(prices, universe)

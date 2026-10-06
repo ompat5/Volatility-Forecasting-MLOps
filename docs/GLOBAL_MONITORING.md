@@ -48,6 +48,11 @@ Refreshed and scheduled runs also require the entire basket to be no more than
 seven calendar days behind the run date. Offline cached replays skip only this
 wall-clock comparison and record that fact in `data_quality`.
 
+The refresh path retries each symbol once to absorb a transient empty provider
+response. It still fails closed with the complete failure map if either attempt
+cannot retrieve any target or VIX; retries never authorize partial-universe
+monitoring.
+
 ### Feature drift
 
 PSI uses the same thresholds as the AAPL monitor:
@@ -133,3 +138,8 @@ The AAPL schedule remains the production monitor. The global workflow is
 explicitly candidate-only and does not change the production model, API, or
 dashboard defaults. Release packaging and retrieval are documented in
 `docs/GLOBAL_RELEASE.md`.
+
+The release-backed live acceptance run refreshed all 35 series, enforced
+wall-clock freshness, and produced 34 synchronized forecasts plus 2,040 delayed
+forecast rows as of 2026-10-02. Data quality, regime, and delayed error were
+`ok`; feature drift was `critical`.

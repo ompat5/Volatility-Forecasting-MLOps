@@ -421,6 +421,13 @@ universe contract before the production default changes.
 - The candidate workflow owns a weekday schedule without a mutable variable
   gate. GitHub schedules run only from the default branch, so it becomes active
   after deliberate merge; manual branch dispatch is the pre-merge acceptance.
+- Public-asset acceptance passed through both downloaded runtimes. Cached
+  dashboard/monitoring produced 34 forecasts, 2,074 ledger rows, and 4,080
+  chart rows. A fresh 35-series run enforced wall-clock freshness and produced
+  34 live plus 2,040 delayed forecasts as of 2026-10-02.
+- A transient empty `GE` response on the first fresh run led to a bounded
+  per-symbol retry. A second failure still aborts the complete run, preserving
+  the no-partial-universe guardrail.
 - Packaging, retrieval, schedule boundaries, and the remaining promotion gate
   are documented in `docs/GLOBAL_RELEASE.md`.
 

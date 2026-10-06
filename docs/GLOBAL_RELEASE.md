@@ -20,6 +20,8 @@ The URL and digest are checked into `configs/global_release.yaml`. Consumers do
 not use a floating release, registry alias, repository variable, or a manually
 entered checksum.
 
+[Open the immutable candidate prerelease](https://github.com/ompat5/Volatility-Forecasting-MLOps/releases/tag/global-volatility-lstm-v3-candidate).
+
 ## Reproducible packaging
 
 Build the archive from the explicit exported registry snapshot:
@@ -73,8 +75,32 @@ The candidate workflow remains separate from the AAPL production workflow and
 emits candidate artifacts and fleet alerts. Enabling it does not change an API
 route, dashboard URL, production model, or promotion label.
 
+## Release acceptance
+
+The public asset was downloaded through the checked-in URL into a clean
+directory. Its SHA-256 matched both independent local builds and GitHub's asset
+digest, after which MLflow and ONNX validation both passed.
+
+Acceptance then used only that downloaded directory:
+
+- the dashboard ONNX path built 34 live forecasts, 2,074 monitoring-ledger
+  rows, and 4,080 chart rows from the cached replay;
+- the MLflow monitoring path produced the same complete 34-target contract;
+- a fresh-data run downloaded all 34 targets plus VIX, enforced wall-clock
+  freshness, and produced 34 synchronized forecasts plus 2,040 delayed rows as
+  of 2026-10-02;
+- fresh-run data quality, regime, and delayed error were `ok`; feature drift
+  remained `critical`, which is a distribution-change signal rather than a
+  failed release.
+
+The first fresh attempt received an empty transient Yahoo response for `GE`.
+The shared global loader now retries each symbol once, then still fails the
+entire run if either attempt is unsuccessful. The acceptance rerun passed with
+complete coverage; partial-universe fallback was never introduced.
+
 ## Remaining gate
 
-After release download, dashboard, and monitoring acceptance pass, the next
-step is an explicit production-cutover review. That review must decide whether
-and how to change defaults; this release does not make that decision implicitly.
+Release download, dashboard-runtime, cached-monitoring, and fresh-monitoring
+acceptance have passed. The next step is an explicit production-cutover review.
+That review must decide whether and how to change defaults; this release does
+not make that decision implicitly.
