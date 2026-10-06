@@ -87,7 +87,9 @@ metrics, and per-ticker holdout metrics are in
 
 The selected registry version is available as a checksum-pinned
 [global-model candidate prerelease](https://github.com/ompat5/Volatility-Forecasting-MLOps/releases/tag/global-volatility-lstm-v3-candidate).
-It remains non-production pending the explicit cutover review.
+The 2026-10-06 cutover review recorded a **no-go for direct production
+promotion**: the candidate is deployment-ready but does not clear the QLIKE
+baseline. See [the review and rollback plan](docs/PRODUCTION_CUTOVER.md).
 
 The global artifact bundles its weights, scaler, ticker vocabulary, feature
 schema, configuration, and benchmark evidence. Its long-form raw-price contract
@@ -328,15 +330,15 @@ and local commands.
 Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
 FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
 opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
-implemented. Global migration Phases 1–9 now add the pooled-model path through
+implemented. Global migration Phases 1–10 now add the pooled-model path through
 opt-in API, FP32 ONNX export, all-embedding parity, measured benchmarking,
 explicit ONNX serving, and full-universe candidate monitoring without changing
 that production default. Global migration Phase 8 adds the complete candidate
-dashboard and group-level views as a separate entrypoint. Remaining global work
-includes a deterministic, checksum-pinned immutable candidate release and
-shared download validation. Remaining global work is the explicit cutover
-review; final portfolio polish follows the migration. The current branch has
-**201 tests**.
+dashboard and group-level views as a separate entrypoint. The immutable
+candidate release and shared download validation are complete. The cutover
+review concluded that direct promotion is not yet justified because QLIKE
+materially trails GARCH; the next global work is time-forward model-quality and
+monitoring-reference remediation. The current branch has **201 tests**.
 
 ### Continuous integration
 
@@ -371,4 +373,6 @@ See [docs/MONITORING.md](docs/MONITORING.md) and
 methodology, and local commands.
 
 Release provenance, deterministic packaging, and the download gate are in
-[docs/GLOBAL_RELEASE.md](docs/GLOBAL_RELEASE.md).
+[docs/GLOBAL_RELEASE.md](docs/GLOBAL_RELEASE.md). The operational decision,
+promotion requirements, and rollback plan are in
+[docs/PRODUCTION_CUTOVER.md](docs/PRODUCTION_CUTOVER.md).

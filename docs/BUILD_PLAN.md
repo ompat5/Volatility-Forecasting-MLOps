@@ -431,13 +431,25 @@ universe contract before the production default changes.
 - Packaging, retrieval, schedule boundaries, and the remaining promotion gate
   are documented in `docs/GLOBAL_RELEASE.md`.
 
-**Next migration step:** conduct an explicit production-cutover review. Do not
-change the API default, public dashboard, AAPL release, or production monitor
-until that review records the operational decision and rollback plan.
+**Global migration Phase 10 — production-cutover review (completed, no-go):**
 
-**Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
-production artifact until the global model passes evaluation, artifact, API,
-ONNX, monitoring, dashboard, and immutable-release acceptance gates.
+- The review covered model evidence, artifact/release integrity, API and
+  container contracts, ONNX parity, dashboard behavior, fresh all-universe
+  monitoring, schedule boundaries, and rollback.
+- The candidate passed the implementation and lifecycle gates, but it is not
+  promoted: pooled holdout RMSE/MAE improve against GARCH while QLIKE is 39.2%
+  worse (and wins only 5/34 tickers). Broad PSI drift is also still an open
+  operational risk, despite healthy data, regime, and delayed-error checks.
+- `aapl-lstm-v1` remains the trained, served, and monitored production
+  artifact. No API default, public dashboard, AAPL release, or production
+  monitor changed.
+- The complete decision, future-promotion criteria, and rollback plan are in
+  [`docs/PRODUCTION_CUTOVER.md`](PRODUCTION_CUTOVER.md).
+
+**Next migration step:** improve and evaluate the global model on validation
+folds, then use a new time-forward promotion holdout or preregistered shadow
+evaluation. Do not reuse the published final holdout to select a replacement
+model.
 
 ---
 
