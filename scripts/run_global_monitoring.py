@@ -11,73 +11,15 @@ import mlflow.pyfunc
 import pandas as pd
 
 from src.config import load_global_config
-from src.data.ingest import DEFAULT_RAW_DIR, DEFAULT_TICKERS_CONFIG, fetch_ticker
-from src.data.panel import load_adjusted_close, normalize_session_index
-from src.data.universe import Universe, load_universe
-from src.features.global_inference import DATE_COL, PRICE_COL, TICKER_COL
+from src.data.global_prices import fetch_global_prices, load_cached_global_prices
+from src.data.ingest import DEFAULT_RAW_DIR, DEFAULT_TICKERS_CONFIG
+from src.data.universe import load_universe
 from src.monitoring.global_pipeline import (
     load_global_monitoring_config,
     run_global_monitoring,
 )
 from src.monitoring.global_reporting import write_global_outputs
 from src.serving.global_api import validate_global_forecaster
-
-
-def _long_prices_from_series(
-    prices: dict[str, pd.Series],
-    universe: Universe,
-) -> pd.DataFrame:
-    frames = [
-        pd.DataFrame(
-            {
-                DATE_COL: series.index,
-                TICKER_COL: symbol,
-                PRICE_COL: series.to_numpy(dtype=float),
-            }
-        )
-        for symbol, series in prices.items()
-    ]
-    frame = pd.concat(frames, ignore_index=True)
-    order = {symbol: index for index, symbol in enumerate(universe.all_symbols)}
-    frame["_ticker_order"] = frame[TICKER_COL].map(order)
-    return (
-        frame.sort_values([DATE_COL, "_ticker_order"])
-        .drop(columns="_ticker_order")
-        .reset_index(drop=True)
-    )
-
-
-def load_cached_global_prices(
-    universe: Universe,
-    raw_dir: Path,
-) -> pd.DataFrame:
-    """Load every configured series from the local ingestion cache."""
-    return _long_prices_from_series(
-        {
-            symbol: load_adjusted_close(symbol, raw_dir)
-            for symbol in universe.all_symbols
-        },
-        universe,
-    )
-
-
-def fetch_global_prices(universe: Universe) -> pd.DataFrame:
-    """Refresh every configured series and fail the run on any missing input."""
-    prices: dict[str, pd.Series] = {}
-    failures: dict[str, str] = {}
-    for symbol in universe.all_symbols:
-        try:
-            frame = fetch_ticker(symbol)
-            series = pd.to_numeric(frame["Adj Close"], errors="coerce").dropna()
-            series.index = normalize_session_index(series.index)
-            prices[symbol] = series.sort_index().astype(float)
-        except Exception as exc:  # noqa: BLE001 - report complete universe failures
-            failures[symbol] = str(exc)
-    if failures:
-        raise RuntimeError(f"Failed to refresh global monitoring inputs: {failures}")
-    return _long_prices_from_series(prices, universe)
-
-
 def _artifact_manifest(model) -> dict:
     try:
         runtime = model.unwrap_python_model()

@@ -56,8 +56,8 @@ The production default and scheduled production monitoring are **AAPL-only**.
 The repository caches 34 forecast targets plus VIX context. A global-model
 migration is in progress: its pooled LSTM candidate has been evaluated,
 packaged, optimized, served behind an opt-in route, and given a separate
-candidate monitor. It is not promoted, and its schedule remains disabled until
-the dashboard, immutable-release, and cutover gates pass.
+candidate monitor and candidate-only dashboard. It is not promoted, and its
+schedule remains disabled until the immutable-release and cutover gates pass.
 
 ### Global candidate benchmark (not production)
 
@@ -288,6 +288,20 @@ The dashboard reuses local model artifacts when available. If they are absent,
 it downloads the checksum-pinned `aapl-lstm-v1` release into temporary storage
 and exports the FP32 ONNX graph once per application process.
 
+Run the separate 34-target candidate dashboard against the local ingestion
+cache:
+
+```bash
+GLOBAL_DASHBOARD_USE_CACHED_PRICES=1 \
+  uv run streamlit run dashboard/global_app.py
+```
+
+The candidate page loads one synchronized 34-target-plus-VIX snapshot, then
+slices it instantly by ticker and group. It includes fleet/ticker monitoring
+and ticker/group/portfolio final-holdout comparisons. It is intentionally not
+the public default and requires an exported `global_model/` candidate. See the
+[global dashboard runbook](docs/GLOBAL_DASHBOARD.md).
+
 Run the global candidate monitor with the exported `global_model/` snapshot and
 cached all-symbol histories:
 
@@ -307,12 +321,13 @@ and local commands.
 Phases 1–5 are complete. Phase 6 optimization and demo work is merged to `main`:
 FP32 ONNX export, parity validation, benchmarks, the measured INT8 decision, an
 opt-in ONNX API backend, and the public AAPL-only Streamlit dashboard are all
-implemented. Global migration Phases 1–7 now add the pooled-model path through
+implemented. Global migration Phases 1–8 now add the pooled-model path through
 opt-in API, FP32 ONNX export, all-embedding parity, measured benchmarking,
 explicit ONNX serving, and full-universe candidate monitoring without changing
-that production default. Remaining global work is the dashboard, immutable
-release, and eventual cutover; final portfolio polish follows the migration.
-The current branch has **185 tests**.
+that production default. Global migration Phase 8 adds the complete candidate
+dashboard and group-level views as a separate entrypoint. Remaining global work
+is the immutable release and eventual cutover; final portfolio polish follows
+the migration. The current branch has **192 tests**.
 
 ### Continuous integration
 

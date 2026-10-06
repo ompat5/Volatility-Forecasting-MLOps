@@ -386,10 +386,30 @@ universe contract before the production default changes.
   `ok`; broad feature drift `critical`; 7/34 elevated regimes; 14/34 ticker error
   warnings/criticals; pooled recent/baseline RMSE ratio `1.267` (`ok`).
 
-**Next migration step:** migrate the dashboard to the 34-target contract, then
-publish and checksum-pin an immutable global candidate release. Only after both
-gates pass should the scheduled global monitor be enabled and an explicit
-production-cutover review begin.
+**Global migration Phase 8 — candidate dashboard (implemented):**
+- `dashboard/global_app.py` is a separate candidate entrypoint; the deployed
+  AAPL `dashboard/app.py` remains unchanged.
+- One cached all-universe model/data/monitoring snapshot backs every ticker
+  view. UI selection slices the synchronized snapshot instead of rerunning 60
+  historical dates across all 34 targets.
+- Startup requires the global candidate role, exact ordered target/VIX
+  universe, five-session horizon, complete checksum-bound FP32 ONNX bundle,
+  and stored final-holdout evidence for all four models across ticker, group,
+  macro, and micro views. A partial artifact or evidence table fails closed.
+- The dashboard exposes target and group selection, latest forecast, recent
+  realized volatility, delayed forecast history, fleet/group/ticker monitoring,
+  shared VIX context, and untouched final-holdout comparisons. VIX cannot be
+  selected as a target.
+- Fresh inputs enforce wall-clock age. Cached and exact-Parquet modes are
+  explicitly labeled offline replays and skip only that comparison.
+- The real exported candidate and cached basket produced 34 live forecasts,
+  2,074 ledger rows, and 4,080 chart rows. The Streamlit page was exercised end
+  to end; details are in `docs/GLOBAL_DASHBOARD.md`.
+
+**Next migration step:** publish and checksum-pin an immutable global candidate
+release, then rerun dashboard and monitoring acceptance from the downloaded
+archive. Only after that gate passes should the scheduled global monitor be
+enabled and an explicit production-cutover review begin.
 
 **Cutover guardrail:** `aapl-lstm-v1` remains the trained, served, and monitored
 production artifact until the global model passes evaluation, artifact, API,
