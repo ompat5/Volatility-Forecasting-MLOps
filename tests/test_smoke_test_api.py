@@ -2,7 +2,12 @@ import scripts.smoke_test_api as smoke_test
 
 
 def test_wait_for_health_retries_connection_reset(monkeypatch):
-    responses = iter([ConnectionResetError("still starting"), {"status": "ok"}])
+    responses = iter(
+        [
+            ConnectionResetError("still starting"),
+            {"status": "ok", "model_scope": "global_34_target", "ready": True},
+        ]
+    )
 
     def fake_get_json(_url: str) -> dict:
         response = next(responses)

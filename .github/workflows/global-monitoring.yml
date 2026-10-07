@@ -1,4 +1,4 @@
-name: Global candidate monitoring
+name: Global monitoring
 
 on:
   schedule:
@@ -10,11 +10,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: global-candidate-monitoring
+  group: global-monitoring
   cancel-in-progress: false
 
 jobs:
-  forecast-and-monitor-global-candidate:
+  forecast-and-monitor-global:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -33,8 +33,8 @@ jobs:
       - name: Install production dependencies
         run: uv sync --locked --no-dev
 
-      - name: Download checksum-pinned global candidate
-        run: uv run python -m scripts.download_global_candidate_model
+      - name: Download checksum-pinned global model
+        run: uv run python -m scripts.download_global_model
 
       - name: Refresh all 35 series, forecast, and monitor
         run: uv run python -m scripts.run_global_monitoring --refresh

@@ -47,9 +47,7 @@ def validate_global_forecaster(model) -> None:
         model_metadata = direct_metadata
         runtime = model
     else:
-        model_metadata = getattr(
-            getattr(model, "metadata", None), "metadata", None
-        )
+        model_metadata = getattr(getattr(model, "metadata", None), "metadata", None)
     expected_metadata = {
         "artifact_role": "global_candidate",
         "target_count": len(universe.target_symbols),
@@ -58,15 +56,13 @@ def validate_global_forecaster(model) -> None:
     if not isinstance(model_metadata, dict) or any(
         model_metadata.get(key) != value for key, value in expected_metadata.items()
     ):
-        raise ValueError(
-            "Configured global runtime is not a compatible global candidate"
-        )
+        raise ValueError("Configured runtime is not a compatible global model")
     if direct_metadata is None:
         try:
             runtime = model.unwrap_python_model()
         except (AttributeError, NotImplementedError) as exc:
             raise ValueError(
-                "GLOBAL_MODEL_URI must load an inspectable MLflow pyfunc"
+                "MODEL_URI must load an inspectable global MLflow pyfunc"
             ) from exc
     if tuple(getattr(runtime, "target_symbols", ())) != universe.target_symbols:
         raise ValueError("Global artifact target universe is incompatible")
@@ -106,12 +102,11 @@ def validated_global_predictions(
         "horizon_sessions",
         "forecast",
     ]
-    if not isinstance(raw_predictions, pd.DataFrame) or list(
-        raw_predictions.columns
-    ) != expected_columns:
-        raise ValueError(
-            f"Expected global model output columns {expected_columns}"
-        )
+    if (
+        not isinstance(raw_predictions, pd.DataFrame)
+        or list(raw_predictions.columns) != expected_columns
+    ):
+        raise ValueError(f"Expected global model output columns {expected_columns}")
     if raw_predictions["ticker"].astype(str).tolist() != list(requested_tickers):
         raise ValueError(
             "Global model must return each requested target exactly once in "
@@ -122,10 +117,7 @@ def validated_global_predictions(
     if horizons.isna().any() or not (horizons == expected_horizon).all():
         raise ValueError("Global model returned an incompatible forecast horizon")
     forecasts = pd.to_numeric(raw_predictions["forecast"], errors="coerce")
-    if (
-        not np.isfinite(forecasts.to_numpy(dtype=float)).all()
-        or (forecasts <= 0).any()
-    ):
+    if not np.isfinite(forecasts.to_numpy(dtype=float)).all() or (forecasts <= 0).any():
         raise ValueError("Global model returned invalid volatility forecasts")
     as_of_dates = pd.to_datetime(raw_predictions["as_of_date"], errors="raise")
     if as_of_dates.isna().any():

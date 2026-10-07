@@ -37,9 +37,6 @@ jobs:
       - name: Test
         run: uv run pytest
 
-      - name: Create deterministic CI model fixture
-        run: uv run python -m scripts.create_ci_model
-
       - name: Create deterministic global CI model fixture
         run: uv run python -m scripts.create_ci_global_model
 
@@ -51,51 +48,37 @@ jobs:
       - name: Build CI validation image
         run: |
           docker build \
-            --build-arg MODEL_DIR=.ci-model \
-            --build-arg MODEL_VARIANT=ci-fixture \
+            --build-arg MODEL_DIR=.ci-global-model \
+            --build-arg MODEL_VARIANT=global-ci-fixture \
             --tag volatility-forecaster:ci \
             .
 
-      - name: Smoke-test AAPL-only default container
-        run: |
-          docker run --detach \
-            --name volatility-forecaster-ci-aapl \
-            --publish 8000:8000 \
-            volatility-forecaster:ci
-          uv run python -m scripts.smoke_test_api
-          docker rm --force volatility-forecaster-ci-aapl
-
-      - name: Smoke-test opt-in global container
+      - name: Smoke-test global MLflow container
         run: |
           docker run --detach \
             --name volatility-forecaster-ci-global \
-            --env GLOBAL_MODEL_URI=/app/global_model \
-            --volume "${{ github.workspace }}/.ci-global-model:/app/global_model:ro" \
             --publish 8000:8000 \
             volatility-forecaster:ci
-          uv run python -m scripts.smoke_test_api --expect-global
+          uv run python -m scripts.smoke_test_api
           docker rm --force volatility-forecaster-ci-global
 
-      - name: Smoke-test explicit global ONNX container
+      - name: Smoke-test global ONNX container
         run: |
           docker run --detach \
             --name volatility-forecaster-ci-global-onnx \
-            --env GLOBAL_MODEL_BACKEND=onnx \
-            --volume "${{ github.workspace }}/.ci-global-model:/app/global_model:ro" \
+            --env MODEL_BACKEND=onnx \
             --publish 8000:8000 \
             volatility-forecaster:ci
-          uv run python -m scripts.smoke_test_api --expect-global
+          uv run python -m scripts.smoke_test_api
 
       - name: Show container logs after failure
         if: failure()
         run: |
-          docker logs volatility-forecaster-ci-aapl || true
           docker logs volatility-forecaster-ci-global || true
           docker logs volatility-forecaster-ci-global-onnx || true
 
       - name: Stop container
         if: always()
         run: |
-          docker rm --force volatility-forecaster-ci-aapl || true
           docker rm --force volatility-forecaster-ci-global || true
           docker rm --force volatility-forecaster-ci-global-onnx || true

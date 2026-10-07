@@ -1,6 +1,6 @@
-# Immutable candidate delivery. This does not make the global model the
-# production default; it pins the exact archive used by candidate monitoring
-# and the separate global dashboard.
+# Immutable global deployment pin. The archive retains its candidate tag and
+# role as immutable training provenance; this repository deploys that exact
+# verified global artifact as its only serving runtime.
 schema_version: 1
 
 release:

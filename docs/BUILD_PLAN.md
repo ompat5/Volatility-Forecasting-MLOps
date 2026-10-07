@@ -431,25 +431,24 @@ universe contract before the production default changes.
 - Packaging, retrieval, schedule boundaries, and the remaining promotion gate
   are documented in `docs/GLOBAL_RELEASE.md`.
 
-**Global migration Phase 10 — production-cutover review (completed, no-go):**
+**Global migration Phase 10 — global-only deployment cutover (implemented):**
 
-- The review covered model evidence, artifact/release integrity, API and
-  container contracts, ONNX parity, dashboard behavior, fresh all-universe
-  monitoring, schedule boundaries, and rollback.
-- The candidate passed the implementation and lifecycle gates, but it is not
-  promoted: pooled holdout RMSE/MAE improve against GARCH while QLIKE is 39.2%
-  worse (and wins only 5/34 tickers). Broad PSI drift is also still an open
-  operational risk, despite healthy data, regime, and delayed-error checks.
-- `aapl-lstm-v1` remains the trained, served, and monitored production
-  artifact. No API default, public dashboard, AAPL release, or production
-  monitor changed.
-- The complete decision, future-promotion criteria, and rollback plan are in
+- `POST /predict`, Docker, Streamlit, and scheduled monitoring now use the
+  complete global target/VIX contract; the AAPL deployment code and workflow
+  were removed from active repository paths.
+- Both MLflow and FP32 ONNX global runtimes are baked and validated through the
+  same container contract. CI requires all 34 forecasts from each backend.
+- The historical holdout trade-off remains visible: pooled RMSE/MAE improve
+  against GARCH while QLIKE is 39.2% worse and wins only 5/34 tickers.
+- The immutable version-3 global archive remains checksum-pinned. Its candidate
+  tag records evaluation provenance, while this repository uses it as the sole
+  deployment artifact.
+- The decision and rollback boundary are in
   [`docs/PRODUCTION_CUTOVER.md`](PRODUCTION_CUTOVER.md).
 
-**Next migration step:** improve and evaluate the global model on validation
-folds, then use a new time-forward promotion holdout or preregistered shadow
-evaluation. Do not reuse the published final holdout to select a replacement
-model.
+**Next migration step:** operate and iterate on the global model. Any successor
+must use validation-only selection and new time-forward evidence; do not reuse
+the published final holdout for model selection.
 
 ---
 

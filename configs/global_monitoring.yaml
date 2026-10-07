@@ -1,5 +1,4 @@
-# Candidate-only monitoring. The AAPL production monitor and release remain
-# authoritative until the global model passes every promotion gate.
+# Monitoring configuration for the deployed 34-target global model.
 monitoring:
   current_window: 60
   backtest_window: 60
@@ -19,5 +18,5 @@ monitoring:
   fleet_critical_fraction: 0.25
 
 model:
-  version: global-volatility-lstm-v3-candidate
+  version: global-volatility-lstm-v3
   role: global_candidate

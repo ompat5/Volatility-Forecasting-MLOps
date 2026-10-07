@@ -1,4 +1,4 @@
-"""Resolve the validated global candidate runtime used by its dashboard."""
+"""Resolve the validated global runtime used by the public dashboard."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ GLOBAL_RELEASE_CONFIG = REPO_ROOT / "configs" / "global_release.yaml"
 
 
 def global_dashboard_model_dir() -> Path:
-    """Prefer an explicit/local candidate, otherwise use verified temp storage."""
+    """Prefer an explicit/local model, otherwise use verified temp storage."""
     configured = os.getenv("GLOBAL_DASHBOARD_MODEL_DIR")
     if configured:
         return Path(configured)
@@ -31,7 +31,7 @@ def global_dashboard_model_dir() -> Path:
 def load_global_dashboard_forecaster(
     model_dir: Path | None = None,
 ) -> GlobalONNXVolatilityForecaster:
-    """Validate one candidate snapshot, export ONNX if absent, and load it."""
+    """Validate one global snapshot, export ONNX if absent, and load it."""
     model_dir = model_dir or global_dashboard_model_dir()
     artifacts_dir = model_dir / "artifacts"
     optimized_dir = model_dir / "optimized"
@@ -46,16 +46,14 @@ def load_global_dashboard_forecaster(
     if missing:
         if model_dir.exists():
             raise FileNotFoundError(
-                "Incomplete global candidate directory; missing: "
-                + ", ".join(missing)
+                "Incomplete global model directory; missing: " + ", ".join(missing)
             )
         download_global_release(GLOBAL_RELEASE_CONFIG, model_dir)
 
     optimized_exists = (model_path.is_file(), export_manifest_path.is_file())
     if any(optimized_exists) and not all(optimized_exists):
         raise FileNotFoundError(
-            "Incomplete global ONNX bundle; expected both the model and export "
-            "manifest"
+            "Incomplete global ONNX bundle; expected both the model and export manifest"
         )
     if not any(optimized_exists):
         export_global_lstm_to_onnx(

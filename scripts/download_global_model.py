@@ -1,4 +1,4 @@
-"""Download one explicitly selected, checksum-pinned global candidate archive."""
+"""Download the checksum-pinned global model used by every deployment path."""
 
 from __future__ import annotations
 
@@ -13,15 +13,11 @@ DEFAULT_RELEASE_CONFIG = REPO_ROOT / "configs" / "global_release.yaml"
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--config",
-        type=Path,
-        default=DEFAULT_RELEASE_CONFIG,
-    )
+    parser.add_argument("--config", type=Path, default=DEFAULT_RELEASE_CONFIG)
     parser.add_argument("--output", type=Path, default=Path("global_model"))
     args = parser.parse_args()
     output = download_global_release(args.config, args.output)
-    print(f"Downloaded verified global candidate to {output}")
+    print(f"Downloaded verified global model to {output}")
 
 
 if __name__ == "__main__":

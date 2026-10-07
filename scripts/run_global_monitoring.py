@@ -1,4 +1,4 @@
-"""Run candidate monitoring across all 34 targets and shared VIX context."""
+"""Run monitoring across all 34 deployed targets and shared VIX context."""
 
 from __future__ import annotations
 
@@ -20,11 +20,15 @@ from src.monitoring.global_pipeline import (
 )
 from src.monitoring.global_reporting import write_global_outputs
 from src.serving.global_api import validate_global_forecaster
+
+
 def _artifact_manifest(model) -> dict:
     try:
         runtime = model.unwrap_python_model()
     except (AttributeError, NotImplementedError) as exc:
-        raise ValueError("Global monitoring requires an inspectable MLflow pyfunc") from exc
+        raise ValueError(
+            "Global monitoring requires an inspectable MLflow pyfunc"
+        ) from exc
     manifest = getattr(runtime, "manifest", None)
     if not isinstance(manifest, dict):
         raise ValueError("Global monitoring model lacks an artifact manifest")
@@ -75,7 +79,7 @@ def main() -> None:
     universe = load_universe(args.universe)
     monitoring_config, model_config = load_global_monitoring_config(args.config)
     if model_config.get("role") != "global_candidate":
-        raise ValueError("Global monitoring config must identify a candidate model")
+        raise ValueError("Global monitoring config must identify the pinned model")
     if args.prices is not None:
         model_input = pd.read_parquet(args.prices)
     elif args.refresh:
@@ -96,11 +100,7 @@ def main() -> None:
         horizon=load_global_config().data.horizon,
         model_version=model_config["version"],
         artifact_manifest=manifest,
-        run_date=(
-            pd.Timestamp.now(tz="America/Toronto")
-            if args.refresh
-            else None
-        ),
+        run_date=(pd.Timestamp.now(tz="America/Toronto") if args.refresh else None),
     )
     write_global_outputs(args.output_dir, report, predictions)
     model_input.to_parquet(args.output_dir / "latest_prices.parquet", index=False)

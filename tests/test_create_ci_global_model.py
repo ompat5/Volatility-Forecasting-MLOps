@@ -13,11 +13,6 @@ from src.data.ingest import DEFAULT_TICKERS_CONFIG
 from src.data.universe import load_universe
 
 
-class _LegacyStub:
-    def predict(self, _prices):
-        return 0.25
-
-
 def test_ci_global_model_covers_the_complete_universe(global_ci_fixture):
     output, loaded, prices = global_ci_fixture
     universe = load_universe(DEFAULT_TICKERS_CONFIG)
@@ -27,9 +22,7 @@ def test_ci_global_model_covers_the_complete_universe(global_ci_fixture):
     assert forecasts["ticker"].tolist() == list(universe.target_symbols)
     assert len(forecasts) == 34
     assert forecasts["horizon_sessions"].tolist() == [5] * 34
-    assert forecasts["forecast"].tolist() == pytest.approx(
-        [FIXTURE_FORECAST] * 34
-    )
+    assert forecasts["forecast"].tolist() == pytest.approx([FIXTURE_FORECAST] * 34)
     assert loaded.metadata.metadata == {
         "artifact_role": "global_candidate",
         "target_count": 34,
@@ -46,17 +39,17 @@ def test_global_api_matches_direct_pyfunc_predictions(
     direct = loaded.predict(prices)
 
     def fake_load_model(uri):
-        return loaded if uri == str(output) else _LegacyStub()
+        assert uri == str(output)
+        return loaded
 
     monkeypatch.setattr("mlflow.pyfunc.load_model", fake_load_model)
-    monkeypatch.setenv("MODEL_URI", "/models/aapl")
-    monkeypatch.setenv("GLOBAL_MODEL_URI", str(output))
+    monkeypatch.setenv("MODEL_URI", str(output))
     payload = prices.copy()
     payload["date"] = payload["date"].dt.date.astype(str)
 
     with TestClient(app_module.app) as client:
         response = client.post(
-            "/predict/global",
+            "/predict",
             json={"observations": payload.to_dict(orient="records")},
         )
 
@@ -66,12 +59,8 @@ def test_global_api_matches_direct_pyfunc_predictions(
     assert api["as_of_date"].tolist() == [
         value.date().isoformat() for value in direct["as_of_date"]
     ]
-    assert api["horizon_sessions"].tolist() == direct[
-        "horizon_sessions"
-    ].tolist()
-    assert api["forecast"].tolist() == pytest.approx(
-        direct["forecast"].tolist()
-    )
+    assert api["horizon_sessions"].tolist() == direct["horizon_sessions"].tolist()
+    assert api["forecast"].tolist() == pytest.approx(direct["forecast"].tolist())
 
 
 def test_global_api_maps_missing_vix_to_validation_error(
@@ -81,17 +70,17 @@ def test_global_api_maps_missing_vix_to_validation_error(
     output, loaded, prices = global_ci_fixture
 
     def fake_load_model(uri):
-        return loaded if uri == str(output) else _LegacyStub()
+        assert uri == str(output)
+        return loaded
 
     monkeypatch.setattr("mlflow.pyfunc.load_model", fake_load_model)
-    monkeypatch.setenv("MODEL_URI", "/models/aapl")
-    monkeypatch.setenv("GLOBAL_MODEL_URI", str(output))
+    monkeypatch.setenv("MODEL_URI", str(output))
     prices = prices[prices["ticker"] != "^VIX"].copy()
     prices["date"] = prices["date"].dt.date.astype(str)
 
     with TestClient(app_module.app) as client:
         response = client.post(
-            "/predict/global",
+            "/predict",
             json={"observations": prices.to_dict(orient="records")},
         )
 

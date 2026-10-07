@@ -1,4 +1,4 @@
-"""Candidate-only Streamlit dashboard for all 34 global forecast targets."""
+"""Streamlit dashboard for all 34 deployed global forecast targets."""
 
 # ruff: noqa: E402 - src imports must follow the Streamlit path bootstrap below.
 
@@ -19,7 +19,6 @@ import pandas as pd
 import streamlit as st
 
 from src.config import REPO_ROOT, load_global_config
-from src.dashboard.data import status_label
 from src.dashboard.global_data import (
     build_global_dashboard_snapshot,
     group_model_comparison,
@@ -37,6 +36,12 @@ from src.monitoring.global_pipeline import load_global_monitoring_config
 REFERENCE_PATH = REPO_ROOT / "monitoring" / "global_reference.json"
 MONITORING_CONFIG_PATH = REPO_ROOT / "configs" / "global_monitoring.yaml"
 RESULTS_PATH = REPO_ROOT / "benchmarks" / "global_model.json"
+
+
+def status_label(status: str) -> str:
+    """Turn a monitoring status into a compact dashboard label."""
+    icons = {"ok": "🟢", "warning": "🟠", "critical": "🔴"}
+    return f"{icons.get(status, '⚪')} {status.upper()}"
 
 
 def _truthy_env(name: str) -> bool:
@@ -109,7 +114,7 @@ def _format_group(group: str) -> str:
 
 
 def _render_monitoring(view, snapshot) -> None:
-    st.subheader("Candidate monitoring")
+    st.subheader("Production monitoring")
     st.caption(
         "Fleet status aggregates all 34 targets. Ticker and group cards are "
         "drill-downs, not separate production alerts."
@@ -128,7 +133,9 @@ def _render_monitoring(view, snapshot) -> None:
     )
 
     regime = view.monitoring["volatility_regime"]
-    regime_col.metric("Ticker volatility regime", status_label(regime["ticker"]["status"]))
+    regime_col.metric(
+        "Ticker volatility regime", status_label(regime["ticker"]["status"])
+    )
     regime_col.caption(
         f"RV20 {regime['ticker']['latest_rv_20d']:.1%} · "
         f"training p95 {regime['ticker']['reference_p95']:.1%}"
@@ -144,7 +151,10 @@ def _render_monitoring(view, snapshot) -> None:
     with st.expander("Complete monitoring context"):
         component_rows = pd.DataFrame(
             [
-                {"component": name.replace("_", " ").title(), "status": status_label(status)}
+                {
+                    "component": name.replace("_", " ").title(),
+                    "status": status_label(status),
+                }
                 for name, status in snapshot.report["component_status"].items()
             ]
         )
@@ -208,35 +218,32 @@ def _render_evaluation(view, evaluation) -> None:
             },
         )
     st.caption(
-        "The global LSTM passes the candidate evidence gate on pooled RMSE and "
-        "MAE; GARCH retains the stronger pooled QLIKE result."
+        "The global LSTM has stronger pooled RMSE and MAE; GARCH retains the "
+        "stronger pooled QLIKE result."
     )
 
 
 def _render() -> None:
     st.set_page_config(
-        page_title="Global Volatility Candidate",
+        page_title="Global Volatility Forecaster",
         page_icon="🌐",
         layout="wide",
     )
     universe = load_universe(DEFAULT_TICKERS_CONFIG)
     groups = tuple(dict.fromkeys(asset.group for asset in universe.targets))
     tickers_by_group = {
-        group: tuple(
-            asset.symbol for asset in universe.targets if asset.group == group
-        )
+        group: tuple(asset.symbol for asset in universe.targets if asset.group == group)
         for group in groups
     }
 
-    st.title("Global Volatility Candidate")
+    st.title("Global Volatility Forecaster")
     st.caption(
         "34 forecast targets · VIX context · Five-trading-day realized volatility · "
         "Annualized values"
     )
-    st.warning(
-        "Candidate evaluation only. The public production default and scheduled "
-        "production monitoring remain AAPL-only; this page does not perform a "
-        "global production cutover."
+    st.info(
+        "Global deployment: 34 forecast targets with shared VIX context. "
+        "The historical benchmark retains GARCH's stronger QLIKE result."
     )
 
     with st.sidebar:
@@ -273,7 +280,7 @@ def _render() -> None:
 
     try:
         with st.spinner(
-            "Loading the verified candidate and one synchronized universe snapshot..."
+            "Loading the verified global model and one synchronized universe snapshot..."
         ):
             snapshot = _load_snapshot()
             evaluation = _load_evaluation()
@@ -283,7 +290,7 @@ def _render() -> None:
                 selected_ticker,
             )
     except Exception as exc:
-        st.error(f"Global candidate dashboard could not be loaded: {exc}")
+        st.error(f"Global dashboard could not be loaded: {exc}")
         st.stop()
 
     regime = view.monitoring["volatility_regime"]["ticker"]
@@ -293,7 +300,9 @@ def _render() -> None:
         f"{view.forecast:.1%}",
         help="Annualized realized-volatility forecast—not a price return.",
     )
-    rv_col.metric("Current 20-day realized volatility", f"{regime['latest_rv_20d']:.1%}")
+    rv_col.metric(
+        "Current 20-day realized volatility", f"{regime['latest_rv_20d']:.1%}"
+    )
     group_col.metric("Asset group", _format_group(view.group))
     as_of_col.metric("Synchronized as of", view.as_of.date().isoformat())
 
@@ -318,7 +327,7 @@ def _render() -> None:
     _render_monitoring(view, snapshot)
     _render_evaluation(view, evaluation)
     st.caption(
-        f"Candidate: {snapshot.report['model_version']} · Training reference ends "
+        f"Model: {snapshot.report['model_version']} · Training reference ends "
         f"{pd.Timestamp(snapshot.report['reference_training_end']).date().isoformat()}"
     )
 

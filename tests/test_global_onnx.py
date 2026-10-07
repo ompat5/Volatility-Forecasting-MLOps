@@ -23,11 +23,6 @@ from src.serving.global_model_wrapper import GlobalVolatilityForecaster
 from src.serving.global_onnx_forecaster import GlobalONNXVolatilityForecaster
 
 
-class _LegacyStub:
-    def predict(self, _prices):
-        return 0.25
-
-
 @pytest.fixture(scope="module")
 def global_onnx_bundle(tmp_path_factory, global_ci_fixture):
     source, _, prices = global_ci_fixture
@@ -53,9 +48,7 @@ def global_onnx_bundle(tmp_path_factory, global_ci_fixture):
     manifest["components"]["model_state_sha256"] = sha256_file(state_path)
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
 
-    onnx_path = (
-        artifact_dir / "optimized" / "global_volatility_lstm_fp32.onnx"
-    )
+    onnx_path = artifact_dir / "optimized" / "global_volatility_lstm_fp32.onnx"
     export_manifest_path = (
         artifact_dir / "optimized" / "global_volatility_lstm_fp32.json"
     )
@@ -151,47 +144,31 @@ def test_global_onnx_rejects_tampered_graph(global_onnx_bundle, tmp_path: Path):
         )
 
 
-def test_fastapi_serves_explicit_global_onnx_backend(
+def test_fastapi_serves_global_onnx_backend(
     global_onnx_bundle,
     monkeypatch,
 ):
     prices = global_onnx_bundle["prices"].copy()
     expected = global_onnx_bundle["onnx"].predict(prices)
-    monkeypatch.setattr(
-        "mlflow.pyfunc.load_model", lambda _uri: _LegacyStub()
-    )
-    monkeypatch.setenv("MODEL_BACKEND", "mlflow")
-    monkeypatch.setenv("MODEL_URI", "/models/aapl")
-    monkeypatch.setenv("GLOBAL_MODEL_BACKEND", "onnx")
-    monkeypatch.delenv("GLOBAL_MODEL_URI", raising=False)
+    monkeypatch.setenv("MODEL_BACKEND", "onnx")
+    monkeypatch.setenv("ONNX_MODEL_PATH", str(global_onnx_bundle["onnx_path"]))
+    monkeypatch.setenv("ONNX_SCALER_PATH", str(global_onnx_bundle["scaler_path"]))
     monkeypatch.setenv(
-        "GLOBAL_ONNX_MODEL_PATH", str(global_onnx_bundle["onnx_path"])
-    )
-    monkeypatch.setenv(
-        "GLOBAL_ONNX_SCALER_PATH", str(global_onnx_bundle["scaler_path"])
-    )
-    monkeypatch.setenv(
-        "GLOBAL_ONNX_ARTIFACT_MANIFEST_PATH",
+        "ONNX_ARTIFACT_MANIFEST_PATH",
         str(global_onnx_bundle["manifest_path"]),
     )
     monkeypatch.setenv(
-        "GLOBAL_ONNX_EXPORT_MANIFEST_PATH",
+        "ONNX_EXPORT_MANIFEST_PATH",
         str(global_onnx_bundle["export_manifest_path"]),
     )
     prices["date"] = prices["date"].dt.date.astype(str)
 
     with TestClient(app_module.app) as client:
-        legacy = client.post(
-            "/predict", json={"prices": [100 + index * 0.1 for index in range(120)]}
-        )
-        health = client.get("/health/global")
         response = client.post(
-            "/predict/global",
+            "/predict",
             json={"observations": prices.to_dict(orient="records")},
         )
 
-    assert legacy.json() == {"forecast": 0.25, "horizon": 5}
-    assert health.json() == {"status": "ok", "configured": True, "ready": True}
     assert response.status_code == 200
     actual = pd.DataFrame(response.json()["predictions"])
     assert actual["ticker"].tolist() == expected["ticker"].tolist()
