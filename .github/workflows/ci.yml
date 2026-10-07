@@ -37,29 +37,48 @@ jobs:
       - name: Test
         run: uv run pytest
 
-      - name: Create deterministic CI model fixture
-        run: uv run python -m scripts.create_ci_model
+      - name: Create deterministic global CI model fixture
+        run: uv run python -m scripts.create_ci_global_model
+
+      - name: Export deterministic global FP32 ONNX fixture
+        run: |
+          uv run python -m scripts.export_global_onnx \
+            --artifact-dir .ci-global-model
 
       - name: Build CI validation image
         run: |
           docker build \
-            --build-arg MODEL_DIR=.ci-model \
-            --build-arg MODEL_VARIANT=ci-fixture \
+            --build-arg MODEL_DIR=.ci-global-model \
+            --build-arg MODEL_VARIANT=global-ci-fixture \
             --tag volatility-forecaster:ci \
             .
 
-      - name: Smoke-test container
+      - name: Smoke-test global MLflow container
         run: |
           docker run --detach \
-            --name volatility-forecaster-ci \
+            --name volatility-forecaster-ci-global \
+            --publish 8000:8000 \
+            volatility-forecaster:ci
+          uv run python -m scripts.smoke_test_api
+          docker rm --force volatility-forecaster-ci-global
+
+      - name: Smoke-test global ONNX container
+        run: |
+          docker run --detach \
+            --name volatility-forecaster-ci-global-onnx \
+            --env MODEL_BACKEND=onnx \
             --publish 8000:8000 \
             volatility-forecaster:ci
           uv run python -m scripts.smoke_test_api
 
       - name: Show container logs after failure
         if: failure()
-        run: docker logs volatility-forecaster-ci || true
+        run: |
+          docker logs volatility-forecaster-ci-global || true
+          docker logs volatility-forecaster-ci-global-onnx || true
 
       - name: Stop container
         if: always()
-        run: docker rm --force volatility-forecaster-ci || true
+        run: |
+          docker rm --force volatility-forecaster-ci-global || true
+          docker rm --force volatility-forecaster-ci-global-onnx || true

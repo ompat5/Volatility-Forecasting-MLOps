@@ -1,0 +1,22 @@
+# Monitoring configuration for the deployed 34-target global model.
+monitoring:
+  current_window: 60
+  backtest_window: 60
+  recent_error_window: 20
+  history_observations: 120
+  max_stale_sessions: 2
+  max_calendar_age_days: 7
+  psi_warning: 0.10
+  psi_critical: 0.25
+  error_ratio_warning: 1.50
+  error_ratio_critical: 2.00
+
+  # A single ticker can be inspected in the report but cannot create a critical
+  # fleet alert. Any critical ticker raises one aggregate warning; critical is
+  # reserved for a broad failure affecting at least 25% of the universe.
+  fleet_warning_fraction: 0.10
+  fleet_critical_fraction: 0.25
+
+model:
+  version: global-volatility-lstm-v3
+  role: global_candidate

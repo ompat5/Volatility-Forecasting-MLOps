@@ -209,6 +209,10 @@ Each phase ends with something you can commit, push, and point to. Build the MVP
 3. Perform the final README/runbook review, update the resume bullet, and mark
    Phase 6 complete after the final green CI run.
 
+These presentation-only tasks are deferred until the global-model migration
+below is complete, so the final demo media and portfolio wording do not freeze
+the temporary AAPL-only architecture in place.
+
 **Acceptance status:** reproducible ONNX export ✅; automated parity ✅;
 published benchmark artifacts/numbers ✅; evidence-backed INT8 decision ✅;
 working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳.
@@ -220,8 +224,231 @@ working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳
 - The existing LSTM output is unconstrained; do not silently clamp negative
   forecasts during optimization. That would be a new model behavior requiring
   reevaluation and versioning.
-- Prediction intervals, a global model, and Slack/external long-term monitoring
-  storage remain deferred unless explicitly pulled into scope.
+- Prediction intervals and Slack/external long-term monitoring storage remain
+  deferred unless explicitly pulled into scope.
+
+### Phase 7 — Global basket model migration — 🟡 IN PROGRESS
+**Goal:** replace the AAPL-only model with one pooled model for all 34 forecast
+targets, using `^VIX` as a context input. The system ingests 35 symbols, but VIX
+is not itself a forecast target.
+
+The migration is deliberately end-to-end: data, evaluation, model packaging,
+serving, ONNX, monitoring, and the dashboard must all share the same explicit
+universe contract before the production default changes.
+
+**Global migration Phase 1 — data foundation (implemented):**
+- `configs/tickers.yaml` now distinguishes 34 targets from the VIX context
+  series and retains asset groups for later evaluation/dashboard breakdowns.
+- `src/data/universe.py` provides a typed, validated source of truth consumed by
+  ingestion and future global components.
+- `src/data/panel.py` normalizes exchange-local timestamps to timezone-free U.S.
+  session dates, preventing the New York-equity/Chicago-VIX join failure.
+- The balanced panel contains the four existing asset features, same-session
+  VIX level and VIX return, and the five-day realized-volatility target.
+- `scripts/build_global_panel.py` writes a gitignored Parquet panel plus a
+  manifest containing universe roles, feature/target schema, horizon, coverage,
+  raw-file hashes, and per-symbol source ranges.
+- On the current cache the contract yields 118,354 rows: 3,481 dates for each of
+  34 targets from 2012-08-14 through 2026-06-18, with no missing values.
+
+**Global migration Phase 2 — evaluation boundaries (implemented):**
+- `configs/global_model.yaml` owns global-only evaluation and future model
+  choices, keeping the legacy AAPL configuration unchanged.
+- `PanelVolatilityDataset` builds sequences inside one ticker at a time, returns
+  a stable ticker ID for the future embedding, and exposes an exact
+  `(date, ticker)` prediction index.
+- Validation/test anchors may use earlier feature context, but only the anchor
+  dates contribute labels to those partitions. The first training anchors that
+  lack 30 complete feature rows are explicitly recorded and excluded.
+- `build_panel_split_plan` partitions unique calendar dates once for the entire
+  universe, with five-session embargoes before both validation and test.
+- Five expanding folds are used for model/epoch selection. The final 252-session
+  holdout is never part of those folds; after selection, its model must refit on
+  every pre-embargo development date rather than hold back another stale
+  validation period.
+- `PanelFeatureScaler` requires explicit training dates and records them with
+  the fitted row count; validation, test, and holdout values cannot influence
+  its statistics.
+- `scripts/build_global_splits.py` persists the exact fold and holdout calendar.
+  On the current cache, final refit data ends 2025-06-10, five sessions are
+  embargoed, and the untouched holdout runs 2025-06-18 through 2026-06-18.
+
+**Global migration Phase 3 — model and honest evaluation (implemented):**
+- `GlobalVolatilityLSTM` shares one sequence encoder across all 34 targets and
+  conditions its head on a learned ticker embedding. It predicts log realized
+  volatility; the public prediction path exponentiates it and rejects invalid
+  outputs, so volatility forecasts are strictly positive without clamping.
+- `BalancedDateBatchSampler` shuffles dates, not individual panel rows, and
+  includes every target ticker equally in each training batch.
+- Each CV fold fits its scaler on that fold's training dates only, early-stops
+  on its purged validation dates, and scores its later test dates. The median
+  best epoch across folds is fixed before the final model refits on all allowed
+  development dates.
+- Naive and EWMA forecasts are same-date comparators. GARCH(1,1) parameters are
+  fit only on each fold's training slice, while its latent variance state is
+  updated with newly observed returns before each as-of forecast; test returns
+  never enter parameter estimation.
+- Evaluation reports exact prediction rows, per-ticker metrics, pooled micro,
+  equal-ticker macro, and asset-group slices. The concise committed benchmark
+  also records the panel hash, universe, config, split plan, and epoch choice.
+- On the untouched 252-session holdout, global-LSTM micro RMSE/MAE are
+  `0.14235`/`0.08837`, versus GARCH `0.14436`/`0.09785` and EWMA
+  `0.14536`/`0.09694`. GARCH remains better on QLIKE (`0.52160` versus
+  `0.72611`), so the result is a modest, mixed win rather than a blanket claim.
+- Coverage audit: 399,432 prediction rows, zero duplicate keys, finite positive
+  forecasts, and all 34 targets present for every model in every fold and the
+  final holdout. The LSTM beats GARCH on per-ticker holdout RMSE for 21/34,
+  MAE for 28/34, and QLIKE for 5/34 targets.
+
+**Global migration Phase 4 — evidence-gated artifact (implemented):**
+- `scripts/train_global.py` refuses to train unless the current panel SHA-256,
+  full global configuration, ordered universe, GARCH-inclusive metrics, and
+  selected epoch count match the committed Phase 3 benchmark.
+- The post-evaluation candidate refits for the selected four epochs on all
+  3,481 target-observable dates: 117,368 ticker sequences. Its scaler fits all
+  118,354 rows only after the evaluation result is frozen.
+- One MLflow pyfunc bundles `state_dict` weights, scaler, 34-ticker embedding
+  vocabulary, groups/context roles, feature schema, architecture, full config,
+  training coverage, evaluation evidence, and component checksums.
+- The raw inference contract is long-form `(date, ticker, adjusted_close)`.
+  Requests may select known targets but must include VIX; preprocessing remains
+  inside the artifact and output is one positive forecast row per target.
+- The artifact is registered separately as `global-volatility-lstm`. Versions
+  are explicitly tagged candidate/non-production/non-serving; the AAPL
+  `volatility-lstm` registry and API default are untouched.
+- `scripts/export_global_model.py` requires a numeric registry version, refuses
+  overwrite, and snapshots to a separate gitignored `global_model/` directory.
+  No floating `latest` export is allowed.
+- Real-data round trip: registered version 3 loaded successfully, produced 34
+  positive forecasts from all targets plus VIX, and its exported snapshot
+  served an AAPL/SPY subset outside the repository import path. See
+  `docs/GLOBAL_MODEL.md` for the contract.
+
+**Global migration Phase 5 — backward-compatible API and CI (implemented):**
+- `POST /predict/global` accepts the artifact's long-form raw observations and
+  returns one validated row per requested target. Known subsets and all 34
+  targets share the same path; `^VIX` remains mandatory.
+- `GLOBAL_MODEL_URI` is optional and separate from the AAPL `MODEL_URI` and
+  `MODEL_BACKEND`. Without it, the service starts normally, `/predict` is
+  unchanged, and the global route returns HTTP 503.
+- Registry-backed global URIs require an explicit numeric
+  `global-volatility-lstm` version. Startup also unwraps the artifact and checks
+  its role, exact ordered 34-target universe, VIX context, and horizon against
+  repository configuration. A mismatched or AAPL artifact fails closed.
+- `GET /health/global` reports global readiness separately without changing the
+  existing `GET /health` response.
+- A deterministic global CI fixture carries the complete production packaging
+  and universe contract but is marked untrained. CI starts the same Docker image
+  in AAPL-only mode and in opt-in global mode, then requires one finite positive
+  forecast for every target plus direct pyfunc/API parity.
+
+**Global migration Phase 6 — FP32 ONNX optimization (implemented):**
+- The exported graph contains the shared LSTM, ticker embedding, head, and
+  exponential output transform. It accepts dynamic batches of scaled
+  `(30, 6)` windows plus INT64 ticker IDs and still produces strictly positive
+  volatility forecasts.
+- Raw-price validation, feature construction, the fitted scaler, ticker order,
+  and response construction remain shared Python code. ONNX changes runtime,
+  not preprocessing or model semantics.
+- A checksummed export sidecar binds the graph to the source artifact manifest,
+  model state, scaler, horizon, target count, and parity evidence. All 34 ticker
+  embeddings must match PyTorch before export succeeds; the real candidate's
+  maximum absolute difference was `5.96e-08`.
+- On the recorded one-thread 34-target run, median core latency fell from
+  `1.8345 ms` to `0.7304 ms` (2.5×), while full long-form request latency moved
+  only from `147.6555 ms` to `146.7871 ms` (~0.6%). Feature construction and
+  scaling dominate the application path.
+- `GLOBAL_MODEL_BACKEND=onnx` is an explicit opt-in and conflicts with a set
+  `GLOBAL_MODEL_URI`. The AAPL backend/default and global MLflow default remain
+  unchanged. CI exercises all three container modes.
+- Reproduction instructions and trade-offs are in `docs/GLOBAL_ONNX.md`; the
+  machine-readable report is `benchmarks/global_onnx_fp32.json`.
+
+**Global migration Phase 7 — candidate monitoring (implemented):**
+- `monitoring/global_reference.json` binds fixed per-ticker asset-feature PSI
+  bins, one shared VIX reference, and per-ticker RV20 p95/p99 thresholds to the
+  exact accepted training-panel checksum and authoritative universe.
+- Every run requires all 34 targets plus VIX, checks duplicate/finite/positive
+  inputs and staleness, and requires synchronized one-row-per-target forecasts.
+- Sixty historical dates are reconstructed through the raw-price artifact path;
+  each call sees only its own as-of history. Target values are joined only after
+  prediction, preserving the delayed-error no-leakage contract.
+- Reports include pooled micro, equal-ticker macro, asset-group, and per-ticker
+  drift, regime, RMSE, MAE, and QLIKE evidence. Shared VIX drift is counted once,
+  not repeated as 34 apparent asset failures.
+- Fleet aggregation emits one alert: 10% non-ok produces warning, 25% critical
+  produces critical, and one isolated critical ticker becomes one warning rather
+  than an alert storm. Contract/data-quality failures still fail closed.
+- The separate weekday workflow remains dormant until an immutable global model
+  URL and checksum are explicitly configured. Manual candidate QA is available;
+  the AAPL production workflow is unchanged.
+- First real cached-data run (2026-06-26): complete 34+1 coverage and data quality
+  `ok`; broad feature drift `critical`; 7/34 elevated regimes; 14/34 ticker error
+  warnings/criticals; pooled recent/baseline RMSE ratio `1.267` (`ok`).
+
+**Global migration Phase 8 — candidate dashboard (implemented):**
+- `dashboard/global_app.py` is a separate candidate entrypoint; the deployed
+  AAPL `dashboard/app.py` remains unchanged.
+- One cached all-universe model/data/monitoring snapshot backs every ticker
+  view. UI selection slices the synchronized snapshot instead of rerunning 60
+  historical dates across all 34 targets.
+- Startup requires the global candidate role, exact ordered target/VIX
+  universe, five-session horizon, complete checksum-bound FP32 ONNX bundle,
+  and stored final-holdout evidence for all four models across ticker, group,
+  macro, and micro views. A partial artifact or evidence table fails closed.
+- The dashboard exposes target and group selection, latest forecast, recent
+  realized volatility, delayed forecast history, fleet/group/ticker monitoring,
+  shared VIX context, and untouched final-holdout comparisons. VIX cannot be
+  selected as a target.
+- Fresh inputs enforce wall-clock age. Cached and exact-Parquet modes are
+  explicitly labeled offline replays and skip only that comparison.
+- The real exported candidate and cached basket produced 34 live forecasts,
+  2,074 ledger rows, and 4,080 chart rows. The Streamlit page was exercised end
+  to end; details are in `docs/GLOBAL_DASHBOARD.md`.
+
+**Global migration Phase 9 — immutable candidate release (implemented):**
+- A deterministic packager validates registry version 3, rejects CI fixtures,
+  verifies both MLflow and checksum-bound ONNX runtimes, and normalizes archive
+  metadata. Two real-candidate runs produced the same 334,241-byte archive and
+  SHA-256 `c40b48f186a9255f6afcfffde1a5ca02f0ff2379ab9d68da87d0b024d353ee0a`.
+- `configs/global_release.yaml` pins the exact prerelease tag, asset URL,
+  digest, registered-model name, and numeric source version. No floating alias
+  or repository-variable override is accepted.
+- Download verifies the digest before safe extraction, then repeats registry,
+  artifact, MLflow, and ONNX validation; failures remove the extracted path.
+- The candidate dashboard automatically uses the pinned release when no local
+  model is supplied. Candidate monitoring downloads the same release pin.
+- The candidate workflow owns a weekday schedule without a mutable variable
+  gate. GitHub schedules run only from the default branch, so it becomes active
+  after deliberate merge; manual branch dispatch is the pre-merge acceptance.
+- Public-asset acceptance passed through both downloaded runtimes. Cached
+  dashboard/monitoring produced 34 forecasts, 2,074 ledger rows, and 4,080
+  chart rows. A fresh 35-series run enforced wall-clock freshness and produced
+  34 live plus 2,040 delayed forecasts as of 2026-10-02.
+- A transient empty `GE` response on the first fresh run led to a bounded
+  per-symbol retry. A second failure still aborts the complete run, preserving
+  the no-partial-universe guardrail.
+- Packaging, retrieval, schedule boundaries, and the remaining promotion gate
+  are documented in `docs/GLOBAL_RELEASE.md`.
+
+**Global migration Phase 10 — global-only deployment cutover (implemented):**
+
+- `POST /predict`, Docker, Streamlit, and scheduled monitoring now use the
+  complete global target/VIX contract; the AAPL deployment code and workflow
+  were removed from active repository paths.
+- Both MLflow and FP32 ONNX global runtimes are baked and validated through the
+  same container contract. CI requires all 34 forecasts from each backend.
+- The historical holdout trade-off remains visible: pooled RMSE/MAE improve
+  against GARCH while QLIKE is 39.2% worse and wins only 5/34 tickers.
+- The immutable version-3 global archive remains checksum-pinned. Its candidate
+  tag records evaluation provenance, while this repository uses it as the sole
+  deployment artifact.
+- The decision and rollback boundary are in
+  [`docs/PRODUCTION_CUTOVER.md`](PRODUCTION_CUTOVER.md).
+
+**Next migration step:** operate and iterate on the global model. Any successor
+must use validation-only selection and new time-forward evidence; do not reuse
+the published final holdout for model selection.
 
 ---
 
@@ -231,7 +458,7 @@ working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳
 Data + features → walk-forward eval → GARCH baseline → one LSTM that matches/beats it → MLflow tracking → FastAPI in Docker → basic README + Streamlit demo.
 
 **Stretch (depth that impresses):**
-TCN/Transformer comparison · global model with ticker embeddings · ONNX + INT8 with a latency/size benchmark · drift monitoring with the regime-shift write-up · scheduled daily pipeline · the options tie-in below.
+TCN/Transformer comparison · ONNX + INT8 with a latency/size benchmark · drift monitoring with the regime-shift write-up · scheduled daily pipeline · the options tie-in below.
 
 ---
 

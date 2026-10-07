@@ -1,0 +1,14 @@
+# Immutable global deployment pin. The archive retains its candidate tag and
+# role as immutable training provenance; this repository deploys that exact
+# verified global artifact as its only serving runtime.
+schema_version: 1
+
+release:
+  version: global-volatility-lstm-v3-candidate
+  role: global_candidate
+  tag: global-volatility-lstm-v3-candidate
+  asset_name: global-volatility-lstm-v3-candidate.tar.gz
+  url: https://github.com/ompat5/Volatility-Forecasting-MLOps/releases/download/global-volatility-lstm-v3-candidate/global-volatility-lstm-v3-candidate.tar.gz
+  sha256: c40b48f186a9255f6afcfffde1a5ca02f0ff2379ab9d68da87d0b024d353ee0a
+  registered_model_name: global-volatility-lstm
+  registered_model_version: 3

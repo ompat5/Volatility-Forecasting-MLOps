@@ -6,13 +6,20 @@ from src.config import (
     Config,
     DataConfig,
     EvalConfig,
+    BaselineConfig,
+    GlobalConfig,
+    GlobalEvalConfig,
+    GlobalModelConfig,
+    GlobalTrainConfig,
     ModelConfig,
     TrainConfig,
     load_config,
+    load_global_config,
 )
 
 
 CFG = load_config()
+GLOBAL_CFG = load_global_config()
 
 
 def test_load_config_returns_config():
@@ -38,6 +45,21 @@ def test_values_match_yaml():
     assert CFG.train.epochs == 50
     assert CFG.train.patience == 10
     assert CFG.train.batch_size == 32
+
+
+def test_global_config_is_separate_and_has_holdout():
+    assert isinstance(GLOBAL_CFG, GlobalConfig)
+    assert isinstance(GLOBAL_CFG.eval, GlobalEvalConfig)
+    assert isinstance(GLOBAL_CFG.model, GlobalModelConfig)
+    assert isinstance(GLOBAL_CFG.train, GlobalTrainConfig)
+    assert isinstance(GLOBAL_CFG.baselines, BaselineConfig)
+    assert not hasattr(CFG.eval, "holdout_size")
+    assert GLOBAL_CFG.eval.holdout_size == 252
+    assert GLOBAL_CFG.model.embedding_dim == 8
+    assert GLOBAL_CFG.model.target_transform == "log"
+    assert GLOBAL_CFG.train.dates_per_batch == 4
+    assert GLOBAL_CFG.baselines.ewma_span == 32.0
+    assert GLOBAL_CFG.data.horizon == CFG.data.horizon
 
 
 def test_lr_is_a_float():

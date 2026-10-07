@@ -12,8 +12,9 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-import yaml
 import yfinance as yf
+
+from src.data.universe import load_universe
 
 logger = logging.getLogger(__name__)
 
@@ -23,14 +24,19 @@ DEFAULT_RAW_DIR = REPO_ROOT / "data" / "raw"
 
 
 def load_ticker_list(config_path: Path = DEFAULT_TICKERS_CONFIG) -> list[str]:
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-    return config["tickers"]
+    """Return every configured target and context symbol for ingestion."""
+    return list(load_universe(config_path).all_symbols)
 
 
-def _cache_path(ticker: str, raw_dir: Path) -> Path:
+def ticker_cache_path(ticker: str, raw_dir: Path) -> Path:
+    """Map a market symbol to its local raw-data cache path."""
     safe_name = ticker.replace("^", "")
     return raw_dir / f"{safe_name}.parquet"
+
+
+# Existing tests and callers used this private name. Keep it while new system
+# components share the public cache-path contract above.
+_cache_path = ticker_cache_path
 
 
 def fetch_ticker(ticker: str) -> pd.DataFrame:
@@ -45,7 +51,7 @@ def fetch_ticker(ticker: str) -> pd.DataFrame:
 def ingest_ticker(ticker: str, raw_dir: Path = DEFAULT_RAW_DIR) -> Path:
     raw_dir.mkdir(parents=True, exist_ok=True)
     df = fetch_ticker(ticker)
-    out_path = _cache_path(ticker, raw_dir)
+    out_path = ticker_cache_path(ticker, raw_dir)
     df.to_parquet(out_path)
     logger.info("Cached %s rows for %s -> %s", len(df), ticker, out_path)
     return out_path

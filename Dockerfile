@@ -3,9 +3,9 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
-# Production builds use ./model. CI overrides this with ./.ci-model, a
-# deterministic fixture that validates packaging without publishing a real model.
-ARG MODEL_DIR=model
+# Production builds use ./global_model. CI overrides this with its deterministic
+# full-universe fixture; neither image contains an AAPL-only runtime.
+ARG MODEL_DIR=global_model
 ARG MODEL_VARIANT=production
 LABEL org.opencontainers.image.model-variant="${MODEL_VARIANT}"
 
@@ -18,7 +18,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # --- App layer ---
-# Copy the code, config, and the baked-in model (exported via scripts/export_model.py).
+# Copy the code, config, and the baked-in global model release.
 COPY src ./src
 COPY configs ./configs
 COPY ${MODEL_DIR} ./model
@@ -26,8 +26,9 @@ COPY ${MODEL_DIR} ./model
 # Put the venv's binaries on PATH and make `src` importable without installing the package.
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app"
-# Load the model from the baked-in folder — no mlflow.db in the container.
+# Load the global model from the baked-in folder — no mlflow.db in the container.
 ENV MODEL_URI="/app/model"
+ENV MODEL_DIR="/app/model"
 
 # Document the port the app listens on.
 EXPOSE 8000

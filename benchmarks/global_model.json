@@ -1,0 +1,2093 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-10-01T02:26:35.133549+00:00",
+  "panel": {
+    "path": "data/processed/global_panel.parquet",
+    "sha256": "5c636067943e3b1ea8611bd271a482741f3142a0b6af038bfa5804176c6af1af",
+    "rows": 118354,
+    "dates": 3481
+  },
+  "universe": {
+    "targets": [
+      "AAPL",
+      "MSFT",
+      "NVDA",
+      "GOOGL",
+      "META",
+      "AMZN",
+      "CRM",
+      "ORCL",
+      "JPM",
+      "BAC",
+      "GS",
+      "MS",
+      "V",
+      "UNH",
+      "JNJ",
+      "PFE",
+      "LLY",
+      "XOM",
+      "CVX",
+      "CAT",
+      "GE",
+      "BA",
+      "WMT",
+      "HD",
+      "MCD",
+      "PG",
+      "KO",
+      "DIS",
+      "XLF",
+      "XLE",
+      "XLK",
+      "XLV",
+      "XLI",
+      "SPY"
+    ],
+    "context": [
+      "^VIX"
+    ]
+  },
+  "config": {
+    "data": {
+      "horizon": 5
+    },
+    "eval": {
+      "n_splits": 5,
+      "min_train_size": 252,
+      "val_frac": 0.2,
+      "holdout_size": 252
+    },
+    "model": {
+      "seq_len": 30,
+      "hidden_size": 64,
+      "num_layers": 1,
+      "dropout": 0.2,
+      "embedding_dim": 8,
+      "target_transform": "log"
+    },
+    "train": {
+      "epochs": 50,
+      "lr": 0.001,
+      "patience": 10,
+      "batch_size": 512,
+      "seed": 42,
+      "dates_per_batch": 4
+    },
+    "baselines": {
+      "ewma_span": 32.0,
+      "garch_update": "fixed_parameters"
+    }
+  },
+  "includes_garch": true,
+  "split_plan": {
+    "schema_version": 1,
+    "horizon": 5,
+    "min_train_size": 252,
+    "val_frac": 0.2,
+    "holdout_size": 252,
+    "folds": [
+      {
+        "name": "fold_1",
+        "train": {
+          "start": "2012-08-14",
+          "end": "2014-04-22",
+          "count": 423
+        },
+        "validation": {
+          "start": "2014-04-30",
+          "end": "2014-09-29",
+          "count": 106
+        },
+        "test": {
+          "start": "2014-10-07",
+          "end": "2016-11-21",
+          "count": 537
+        }
+      },
+      {
+        "name": "fold_2",
+        "train": {
+          "start": "2012-08-14",
+          "end": "2016-01-04",
+          "count": 852
+        },
+        "validation": {
+          "start": "2016-01-12",
+          "end": "2016-11-14",
+          "count": 214
+        },
+        "test": {
+          "start": "2016-11-22",
+          "end": "2019-01-11",
+          "count": 537
+        }
+      },
+      {
+        "name": "fold_3",
+        "train": {
+          "start": "2012-08-14",
+          "end": "2017-09-18",
+          "count": 1282
+        },
+        "validation": {
+          "start": "2017-09-26",
+          "end": "2019-01-04",
+          "count": 321
+        },
+        "test": {
+          "start": "2019-01-14",
+          "end": "2021-03-02",
+          "count": 537
+        }
+      },
+      {
+        "name": "fold_4",
+        "train": {
+          "start": "2012-08-14",
+          "end": "2019-06-04",
+          "count": 1711
+        },
+        "validation": {
+          "start": "2019-06-12",
+          "end": "2021-02-23",
+          "count": 429
+        },
+        "test": {
+          "start": "2021-03-03",
+          "end": "2023-04-19",
+          "count": 537
+        }
+      },
+      {
+        "name": "fold_5",
+        "train": {
+          "start": "2012-08-14",
+          "end": "2021-02-17",
+          "count": 2141
+        },
+        "validation": {
+          "start": "2021-02-25",
+          "end": "2023-04-12",
+          "count": 536
+        },
+        "test": {
+          "start": "2023-04-20",
+          "end": "2025-06-10",
+          "count": 537
+        }
+      }
+    ],
+    "holdout": {
+      "name": "final_holdout",
+      "fit": {
+        "start": "2012-08-14",
+        "end": "2025-06-10",
+        "count": 3224
+      },
+      "test": {
+        "start": "2025-06-18",
+        "end": "2026-06-18",
+        "count": 252
+      }
+    }
+  },
+  "training": {
+    "folds": [
+      {
+        "split": "fold_1",
+        "best_epoch": 12,
+        "best_validation_loss": 0.2260016791530772
+      },
+      {
+        "split": "fold_2",
+        "best_epoch": 1,
+        "best_validation_loss": 0.3105997771368766
+      },
+      {
+        "split": "fold_3",
+        "best_epoch": 4,
+        "best_validation_loss": 0.2838275831207068
+      },
+      {
+        "split": "fold_4",
+        "best_epoch": 11,
+        "best_validation_loss": 0.285547911671312
+      },
+      {
+        "split": "fold_5",
+        "best_epoch": 2,
+        "best_validation_loss": 0.22189032529089092
+      }
+    ],
+    "selected_epochs": 4
+  },
+  "aggregate_metrics": [
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.1283733089,
+      "mae": 0.0969369089,
+      "qlike": 0.5403912489,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1453612112,
+      "mae": 0.0969369089,
+      "qlike": 0.5403912489,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.1005770355,
+      "mae": 0.0738424815,
+      "qlike": 0.4997948818,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.0728237518,
+      "mae": 0.0558114041,
+      "qlike": 0.4313569124,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1113209048,
+      "mae": 0.0864522922,
+      "qlike": 0.4882670072,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1997756441,
+      "mae": 0.1315720029,
+      "qlike": 0.7557429041,
+      "observations": 1008
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1286615081,
+      "mae": 0.0972317876,
+      "qlike": 0.4258604791,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.2004775161,
+      "mae": 0.1341528973,
+      "qlike": 0.649097831,
+      "observations": 2016
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.1285309749,
+      "mae": 0.0978505306,
+      "qlike": 0.5215964216,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1443586411,
+      "mae": 0.0978505306,
+      "qlike": 0.5215964216,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.0978618403,
+      "mae": 0.072742729,
+      "qlike": 0.4543184916,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.0736237291,
+      "mae": 0.0571969129,
+      "qlike": 0.4027652979,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.115253812,
+      "mae": 0.0923210587,
+      "qlike": 0.4742199976,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1927703028,
+      "mae": 0.1254619729,
+      "qlike": 0.7302303509,
+      "observations": 1008
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1287942322,
+      "mae": 0.0978907155,
+      "qlike": 0.4163963102,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.2001740777,
+      "mae": 0.1367966782,
+      "qlike": 0.6522215817,
+      "observations": 2016
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.125808576,
+      "mae": 0.0883647009,
+      "qlike": 0.7261077447,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1423519547,
+      "mae": 0.0883647009,
+      "qlike": 0.7261077447,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.0977760396,
+      "mae": 0.0680383547,
+      "qlike": 0.5928115814,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.0718406798,
+      "mae": 0.0534618534,
+      "qlike": 0.4164339064,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1094553009,
+      "mae": 0.0802370361,
+      "qlike": 0.5552642683,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1810895768,
+      "mae": 0.101556607,
+      "qlike": 1.1096281017,
+      "observations": 1008
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1346874369,
+      "mae": 0.0970476219,
+      "qlike": 0.6308173063,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.199647089,
+      "mae": 0.1228436082,
+      "qlike": 1.0329087641,
+      "observations": 2016
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.1615570404,
+      "mae": 0.1189402979,
+      "qlike": 1.62828552,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1806388279,
+      "mae": 0.1189402979,
+      "qlike": 1.62828552,
+      "observations": 8568
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.124286233,
+      "mae": 0.0907014574,
+      "qlike": 1.6411907957,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.0928296025,
+      "mae": 0.0707063321,
+      "qlike": 1.4283338603,
+      "observations": 1512
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1469332557,
+      "mae": 0.1108184741,
+      "qlike": 1.4746246878,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.2382626989,
+      "mae": 0.1487244996,
+      "qlike": 2.0199392766,
+      "observations": 1008
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1680584489,
+      "mae": 0.1280422288,
+      "qlike": 1.3729754724,
+      "observations": 1260
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.247185441,
+      "mae": 0.1607902347,
+      "qlike": 1.8283502297,
+      "observations": 2016
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.148785031,
+      "mae": 0.1017443731,
+      "qlike": 0.63762562,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1539211063,
+      "mae": 0.1017443731,
+      "qlike": 0.63762562,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.1260770152,
+      "mae": 0.0833042265,
+      "qlike": 0.6796071045,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.113066338,
+      "mae": 0.0735009759,
+      "qlike": 0.5524272817,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1538086465,
+      "mae": 0.1050715985,
+      "qlike": 0.5930356631,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1417087643,
+      "mae": 0.0951286906,
+      "qlike": 0.6631776814,
+      "observations": 10740
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1640185732,
+      "mae": 0.1119589489,
+      "qlike": 0.5649905706,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "ewma",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.1937524573,
+      "mae": 0.1316012464,
+      "qlike": 0.7305278586,
+      "observations": 21480
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.143966374,
+      "mae": 0.0987616121,
+      "qlike": 0.7293971824,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1501734956,
+      "mae": 0.0987616121,
+      "qlike": 0.7293971824,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.1209597858,
+      "mae": 0.0792062298,
+      "qlike": 0.7166612297,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.1051285405,
+      "mae": 0.0678533511,
+      "qlike": 0.5443716088,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1450742953,
+      "mae": 0.1008413418,
+      "qlike": 0.5662786944,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1360060727,
+      "mae": 0.0902917323,
+      "qlike": 0.6483129154,
+      "observations": 10740
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1616480594,
+      "mae": 0.1074007119,
+      "qlike": 0.6488496804,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "garch",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.1945498524,
+      "mae": 0.1341450162,
+      "qlike": 1.0705517044,
+      "observations": 21480
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.1412760836,
+      "mae": 0.0887089177,
+      "qlike": 0.7679071073,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1465332595,
+      "mae": 0.0887089177,
+      "qlike": 0.7679071073,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.1166634638,
+      "mae": 0.0716722552,
+      "qlike": 0.7606467661,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.1066649788,
+      "mae": 0.0652568319,
+      "qlike": 0.547331329,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1453411509,
+      "mae": 0.0910783853,
+      "qlike": 0.669532884,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1330164897,
+      "mae": 0.0841448498,
+      "qlike": 0.8020966198,
+      "observations": 10740
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1675330317,
+      "mae": 0.1026431486,
+      "qlike": 0.8238753526,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "global_lstm",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.181449304,
+      "mae": 0.1111677011,
+      "qlike": 0.9481931772,
+      "observations": 21480
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "macro",
+      "group": null,
+      "rmse": 0.1665091747,
+      "mae": 0.1125039138,
+      "qlike": 1.8079643531,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "micro",
+      "group": null,
+      "rmse": 0.1734484373,
+      "mae": 0.1125039138,
+      "qlike": 1.8079643531,
+      "observations": 91290
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "group",
+      "group": "consumer",
+      "rmse": 0.1395183615,
+      "mae": 0.0909088292,
+      "qlike": 1.9108399332,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "group",
+      "group": "etf",
+      "rmse": 0.1194255394,
+      "mae": 0.0797215484,
+      "qlike": 1.3826646257,
+      "observations": 16110
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "group",
+      "group": "financials",
+      "rmse": 0.1693493992,
+      "mae": 0.1164511814,
+      "qlike": 1.7075174502,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "group",
+      "group": "healthcare",
+      "rmse": 0.1616087073,
+      "mae": 0.1055577838,
+      "qlike": 2.631695069,
+      "observations": 10740
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "group",
+      "group": "industrials_energy",
+      "rmse": 0.1847428997,
+      "mae": 0.1274128641,
+      "qlike": 1.5747185917,
+      "observations": 13425
+    },
+    {
+      "split": "cv_combined",
+      "model": "naive",
+      "scope": "group",
+      "group": "technology",
+      "rmse": 0.2241612062,
+      "mae": 0.1449749302,
+      "qlike": 1.8464750209,
+      "observations": 21480
+    }
+  ],
+  "final_holdout_per_ticker_metrics": [
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "AAPL",
+      "rmse": 0.1089345836,
+      "mae": 0.0908812405,
+      "qlike": 0.5436585189,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "AMZN",
+      "rmse": 0.1504599703,
+      "mae": 0.1102895796,
+      "qlike": 0.5792898753,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "BA",
+      "rmse": 0.1514351085,
+      "mae": 0.122637468,
+      "qlike": 0.5365390133,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "BAC",
+      "rmse": 0.0912086913,
+      "mae": 0.0709896085,
+      "qlike": 0.414567265,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "CAT",
+      "rmse": 0.1655823768,
+      "mae": 0.1227165046,
+      "qlike": 0.4972220002,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "CRM",
+      "rmse": 0.1713958055,
+      "mae": 0.1286207222,
+      "qlike": 0.4365568213,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "CVX",
+      "rmse": 0.097996238,
+      "mae": 0.0741895704,
+      "qlike": 0.4484677996,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "DIS",
+      "rmse": 0.1432746093,
+      "mae": 0.1019674213,
+      "qlike": 0.7745722202,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "GE",
+      "rmse": 0.1197659537,
+      "mae": 0.0959251904,
+      "qlike": 0.318443483,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "GOOGL",
+      "rmse": 0.1339841304,
+      "mae": 0.1034292775,
+      "qlike": 0.5051158276,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "GS",
+      "rmse": 0.1247806888,
+      "mae": 0.0975103012,
+      "qlike": 0.4191318348,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "HD",
+      "rmse": 0.1009141031,
+      "mae": 0.0779543112,
+      "qlike": 0.4273288375,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "JNJ",
+      "rmse": 0.0800198995,
+      "mae": 0.058970237,
+      "qlike": 0.4990645454,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "JPM",
+      "rmse": 0.0944517017,
+      "mae": 0.0767948519,
+      "qlike": 0.436108498,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "KO",
+      "rmse": 0.0714099474,
+      "mae": 0.0550202222,
+      "qlike": 0.4013554552,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "LLY",
+      "rmse": 0.2349013966,
+      "mae": 0.1756219339,
+      "qlike": 0.8436565241,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "MCD",
+      "rmse": 0.0633436163,
+      "mae": 0.0497182912,
+      "qlike": 0.3165610343,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "META",
+      "rmse": 0.2166937639,
+      "mae": 0.1679703817,
+      "qlike": 0.9463454131,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "MS",
+      "rmse": 0.117505978,
+      "mae": 0.0920238757,
+      "qlike": 0.4635477541,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "MSFT",
+      "rmse": 0.1362164169,
+      "mae": 0.0938128414,
+      "qlike": 0.6637506569,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "NVDA",
+      "rmse": 0.151681961,
+      "mae": 0.124379939,
+      "qlike": 0.4288981453,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "ORCL",
+      "rmse": 0.3888163362,
+      "mae": 0.2538391963,
+      "qlike": 1.0891673896,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "PFE",
+      "rmse": 0.122620777,
+      "mae": 0.0914837801,
+      "qlike": 0.5051573589,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "PG",
+      "rmse": 0.0691759511,
+      "mae": 0.0570774653,
+      "qlike": 0.3153919623,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "SPY",
+      "rmse": 0.0620961921,
+      "mae": 0.0495160485,
+      "qlike": 0.6288693713,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "UNH",
+      "rmse": 0.2881380339,
+      "mae": 0.2002120606,
+      "qlike": 1.175093188,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "V",
+      "rmse": 0.1238696685,
+      "mae": 0.0949428236,
+      "qlike": 0.7079796841,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "WMT",
+      "rmse": 0.1268308481,
+      "mae": 0.1013171776,
+      "qlike": 0.7635597811,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "XLE",
+      "rmse": 0.0749448136,
+      "mae": 0.0594687833,
+      "qlike": 0.2942909578,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "XLF",
+      "rmse": 0.0623161314,
+      "mae": 0.050401807,
+      "qlike": 0.3839717446,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "XLI",
+      "rmse": 0.064881291,
+      "mae": 0.0492878656,
+      "qlike": 0.3570812405,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "XLK",
+      "rmse": 0.1035145697,
+      "mae": 0.0758692722,
+      "qlike": 0.5522561806,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "XLV",
+      "rmse": 0.0594893482,
+      "mae": 0.0503246477,
+      "qlike": 0.3716719798,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "ewma",
+      "ticker": "XOM",
+      "rmse": 0.0920416019,
+      "mae": 0.0706902045,
+      "qlike": 0.3286300994,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "AAPL",
+      "rmse": 0.1118340631,
+      "mae": 0.0950758244,
+      "qlike": 0.5083726667,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "AMZN",
+      "rmse": 0.1567868661,
+      "mae": 0.1189630065,
+      "qlike": 0.5104366147,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "BA",
+      "rmse": 0.1536081599,
+      "mae": 0.1262330377,
+      "qlike": 0.529403921,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "BAC",
+      "rmse": 0.1013491391,
+      "mae": 0.0841363186,
+      "qlike": 0.3981881179,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "CAT",
+      "rmse": 0.1641071056,
+      "mae": 0.1197918651,
+      "qlike": 0.5228794354,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "CRM",
+      "rmse": 0.1838972311,
+      "mae": 0.1373650886,
+      "qlike": 0.4940231296,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "CVX",
+      "rmse": 0.0995135982,
+      "mae": 0.0770922616,
+      "qlike": 0.4158000838,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "DIS",
+      "rmse": 0.1392387531,
+      "mae": 0.1018484946,
+      "qlike": 0.644845069,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "GE",
+      "rmse": 0.1189080451,
+      "mae": 0.0952383328,
+      "qlike": 0.3051905306,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "GOOGL",
+      "rmse": 0.1319752273,
+      "mae": 0.1005004723,
+      "qlike": 0.4634942605,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "GS",
+      "rmse": 0.1272349353,
+      "mae": 0.0988705903,
+      "qlike": 0.4370227412,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "HD",
+      "rmse": 0.0983217682,
+      "mae": 0.0759602864,
+      "qlike": 0.3885575354,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "JNJ",
+      "rmse": 0.0782994398,
+      "mae": 0.0576878608,
+      "qlike": 0.4750194719,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "JPM",
+      "rmse": 0.0963675249,
+      "mae": 0.0811833637,
+      "qlike": 0.4112838356,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "KO",
+      "rmse": 0.069110773,
+      "mae": 0.0538531863,
+      "qlike": 0.3640313153,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "LLY",
+      "rmse": 0.2239551181,
+      "mae": 0.1641001125,
+      "qlike": 0.8000286624,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "MCD",
+      "rmse": 0.0633524,
+      "mae": 0.0510009562,
+      "qlike": 0.2971209353,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "META",
+      "rmse": 0.2083648843,
+      "mae": 0.174457918,
+      "qlike": 0.6822205832,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "MS",
+      "rmse": 0.1196090172,
+      "mae": 0.0990660935,
+      "qlike": 0.4259838008,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "MSFT",
+      "rmse": 0.1345968407,
+      "mae": 0.0987753552,
+      "qlike": 0.5688489084,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "NVDA",
+      "rmse": 0.1663445095,
+      "mae": 0.1401195299,
+      "qlike": 0.4198800061,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "ORCL",
+      "rmse": 0.3781929792,
+      "mae": 0.2291162304,
+      "qlike": 1.5704964841,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "PFE",
+      "rmse": 0.1233337804,
+      "mae": 0.0909914226,
+      "qlike": 0.5242182588,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "PG",
+      "rmse": 0.0707206881,
+      "mae": 0.0582259861,
+      "qlike": 0.3345616141,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "SPY",
+      "rmse": 0.0609240223,
+      "mae": 0.0491366164,
+      "qlike": 0.5300239234,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "UNH",
+      "rmse": 0.2777474393,
+      "mae": 0.1890684955,
+      "qlike": 1.1216550106,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "V",
+      "rmse": 0.1279211174,
+      "mae": 0.0983489273,
+      "qlike": 0.6986214923,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "WMT",
+      "rmse": 0.1208958105,
+      "mae": 0.0955674647,
+      "qlike": 0.6967944802,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "XLE",
+      "rmse": 0.07662599,
+      "mae": 0.0615079882,
+      "qlike": 0.2790183584,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "XLF",
+      "rmse": 0.066152768,
+      "mae": 0.0558505169,
+      "qlike": 0.3620179747,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "XLI",
+      "rmse": 0.0676452692,
+      "mae": 0.0503165212,
+      "qlike": 0.3626509763,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "XLK",
+      "rmse": 0.1023315431,
+      "mae": 0.0758837044,
+      "qlike": 0.5070002427,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "XLV",
+      "rmse": 0.0592927166,
+      "mae": 0.05048613,
+      "qlike": 0.3758803121,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "garch",
+      "ticker": "XOM",
+      "rmse": 0.0914936225,
+      "mae": 0.0710980801,
+      "qlike": 0.3087075801,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "AAPL",
+      "rmse": 0.1012873551,
+      "mae": 0.0839863296,
+      "qlike": 0.5433239091,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "AMZN",
+      "rmse": 0.1429009197,
+      "mae": 0.0939702972,
+      "qlike": 0.6862076081,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "BA",
+      "rmse": 0.1459728131,
+      "mae": 0.1093888564,
+      "qlike": 0.7060644919,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "BAC",
+      "rmse": 0.0862338926,
+      "mae": 0.0655866542,
+      "qlike": 0.3692230461,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "CAT",
+      "rmse": 0.1856813369,
+      "mae": 0.1336980726,
+      "qlike": 1.0079163837,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "CRM",
+      "rmse": 0.1790756821,
+      "mae": 0.1285756187,
+      "qlike": 0.7381301268,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "CVX",
+      "rmse": 0.0954969152,
+      "mae": 0.0695498686,
+      "qlike": 0.4907864374,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "DIS",
+      "rmse": 0.1333720345,
+      "mae": 0.0828970526,
+      "qlike": 0.8019574055,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "GE",
+      "rmse": 0.1282230608,
+      "mae": 0.1001578384,
+      "qlike": 0.5003277018,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "GOOGL",
+      "rmse": 0.1289668078,
+      "mae": 0.0909069616,
+      "qlike": 0.6691177615,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "GS",
+      "rmse": 0.1315860821,
+      "mae": 0.0968100209,
+      "qlike": 0.6486192422,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "HD",
+      "rmse": 0.0996478835,
+      "mae": 0.0741593222,
+      "qlike": 0.5172802915,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "JNJ",
+      "rmse": 0.0794237021,
+      "mae": 0.0553752486,
+      "qlike": 0.6359221941,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "JPM",
+      "rmse": 0.0954741156,
+      "mae": 0.0737828315,
+      "qlike": 0.5112321367,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "KO",
+      "rmse": 0.0696213182,
+      "mae": 0.0521532812,
+      "qlike": 0.4497503144,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "LLY",
+      "rmse": 0.2196122778,
+      "mae": 0.1392144242,
+      "qlike": 1.3436218422,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "MCD",
+      "rmse": 0.0650825294,
+      "mae": 0.0501740645,
+      "qlike": 0.4019645071,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "META",
+      "rmse": 0.1967644659,
+      "mae": 0.1251220638,
+      "qlike": 1.02050757,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "MS",
+      "rmse": 0.1172847785,
+      "mae": 0.0865826579,
+      "qlike": 0.5354724963,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "MSFT",
+      "rmse": 0.1381975681,
+      "mae": 0.0939513393,
+      "qlike": 0.8620938753,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "NVDA",
+      "rmse": 0.1567281176,
+      "mae": 0.1219672771,
+      "qlike": 0.5896469586,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "ORCL",
+      "rmse": 0.3963745917,
+      "mae": 0.2442689781,
+      "qlike": 3.1542423032,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "PFE",
+      "rmse": 0.1108699974,
+      "mae": 0.0760157618,
+      "qlike": 0.6027129363,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "PG",
+      "rmse": 0.0745188004,
+      "mae": 0.058809615,
+      "qlike": 0.4517077674,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "SPY",
+      "rmse": 0.0532204413,
+      "mae": 0.0414321429,
+      "qlike": 0.4500640135,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "UNH",
+      "rmse": 0.253661006,
+      "mae": 0.1356209933,
+      "qlike": 1.8562554341,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "V",
+      "rmse": 0.1108156452,
+      "mae": 0.078423016,
+      "qlike": 0.7117744203,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "WMT",
+      "rmse": 0.1225039103,
+      "mae": 0.0900367927,
+      "qlike": 0.9342092023,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "XLE",
+      "rmse": 0.0764851815,
+      "mae": 0.0594544276,
+      "qlike": 0.3201363918,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "XLF",
+      "rmse": 0.0588109813,
+      "mae": 0.0477445963,
+      "qlike": 0.3344222579,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "XLI",
+      "rmse": 0.0633135536,
+      "mae": 0.047944605,
+      "qlike": 0.3467352405,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "XLK",
+      "rmse": 0.1086289589,
+      "mae": 0.0786655639,
+      "qlike": 0.686106374,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "XLV",
+      "rmse": 0.0549227914,
+      "mae": 0.0455297845,
+      "qlike": 0.3611391608,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "global_lstm",
+      "ticker": "XOM",
+      "rmse": 0.0967320686,
+      "mae": 0.0724434734,
+      "qlike": 0.4489915167,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "AAPL",
+      "rmse": 0.1258363626,
+      "mae": 0.0971431293,
+      "qlike": 1.4782354373,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "AMZN",
+      "rmse": 0.1861190915,
+      "mae": 0.1330390398,
+      "qlike": 1.7785438847,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "BA",
+      "rmse": 0.1950539666,
+      "mae": 0.1572653121,
+      "qlike": 1.854420499,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "BAC",
+      "rmse": 0.1146233682,
+      "mae": 0.0852311115,
+      "qlike": 1.361707671,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "CAT",
+      "rmse": 0.2122862525,
+      "mae": 0.1588865292,
+      "qlike": 1.7306730558,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "CRM",
+      "rmse": 0.2282030721,
+      "mae": 0.1638077998,
+      "qlike": 1.4822723927,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "CVX",
+      "rmse": 0.1333661538,
+      "mae": 0.1014609229,
+      "qlike": 1.5556359895,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "DIS",
+      "rmse": 0.1606823567,
+      "mae": 0.1051916327,
+      "qlike": 2.1360333214,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "GE",
+      "rmse": 0.1622228896,
+      "mae": 0.1306921722,
+      "qlike": 0.9427384296,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "GOOGL",
+      "rmse": 0.167449799,
+      "mae": 0.1286563517,
+      "qlike": 1.3666202252,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "GS",
+      "rmse": 0.1747354817,
+      "mae": 0.1371752558,
+      "qlike": 1.5960705228,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "HD",
+      "rmse": 0.127365652,
+      "mae": 0.0997284983,
+      "qlike": 1.1845968954,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "JNJ",
+      "rmse": 0.0993130677,
+      "mae": 0.0711100452,
+      "qlike": 1.4192895784,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "JPM",
+      "rmse": 0.1243750408,
+      "mae": 0.0954020384,
+      "qlike": 1.1556166293,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "KO",
+      "rmse": 0.0938028344,
+      "mae": 0.0742666122,
+      "qlike": 1.0260245214,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "LLY",
+      "rmse": 0.2879876752,
+      "mae": 0.2087171669,
+      "qlike": 3.0874280103,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "MCD",
+      "rmse": 0.083726273,
+      "mae": 0.0664913769,
+      "qlike": 0.8638743787,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "META",
+      "rmse": 0.2594861708,
+      "mae": 0.1761686205,
+      "qlike": 2.0785837421,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "MS",
+      "rmse": 0.1472057052,
+      "mae": 0.1161250887,
+      "qlike": 1.096860033,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "MSFT",
+      "rmse": 0.1643452607,
+      "mae": 0.1151773972,
+      "qlike": 2.0745509648,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "NVDA",
+      "rmse": 0.2108375888,
+      "mae": 0.1685352019,
+      "qlike": 1.6004031924,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "ORCL",
+      "rmse": 0.4684218482,
+      "mae": 0.3037943371,
+      "qlike": 2.7675919984,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "PFE",
+      "rmse": 0.1463587237,
+      "mae": 0.1044843727,
+      "qlike": 1.4092422953,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "PG",
+      "rmse": 0.0925268372,
+      "mae": 0.0755271029,
+      "qlike": 1.0077543571,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "SPY",
+      "rmse": 0.0724566272,
+      "mae": 0.0554488926,
+      "qlike": 2.0072699527,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "UNH",
+      "rmse": 0.3359398641,
+      "mae": 0.2105864135,
+      "qlike": 2.1637972225,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "V",
+      "rmse": 0.1647338236,
+      "mae": 0.1201588763,
+      "qlike": 2.1628685828,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "WMT",
+      "rmse": 0.1620842406,
+      "mae": 0.1230035217,
+      "qlike": 3.6288613005,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "XLE",
+      "rmse": 0.1036776016,
+      "mae": 0.0830545218,
+      "qlike": 1.0200422514,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "XLF",
+      "rmse": 0.0793039313,
+      "mae": 0.0643887329,
+      "qlike": 0.9197234935,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "XLI",
+      "rmse": 0.0865513895,
+      "mae": 0.0638915302,
+      "qlike": 1.11608481,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "XLK",
+      "rmse": 0.126399362,
+      "mae": 0.0940805808,
+      "qlike": 1.6292657205,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "XLV",
+      "rmse": 0.0771229369,
+      "mae": 0.0633737345,
+      "qlike": 1.8776169337,
+      "observations": 252
+    },
+    {
+      "split": "final_holdout",
+      "model": "naive",
+      "ticker": "XOM",
+      "rmse": 0.1183381237,
+      "mae": 0.0919062078,
+      "qlike": 0.7814093882,
+      "observations": 252
+    }
+  ]
+}
