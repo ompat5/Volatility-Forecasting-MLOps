@@ -1,8 +1,7 @@
 # Global model deployment contract
 
 The repository deploys one pooled LSTM for all 34 target tickers. `^VIX` is
-mandatory context and is never a forecast target. The legacy AAPL serving path
-has been removed from active deployment code.
+mandatory context and is never a forecast target.
 
 ## Artifact
 
@@ -60,4 +59,4 @@ docker run --rm -e MODEL_BACKEND=onnx -p 8000:8000 volatility-forecaster
 ```
 
 CI validates the MLflow and ONNX variants against a deterministic all-34-target
-fixture. It has no AAPL-only container mode.
+fixture. It has one global container mode.

@@ -7,10 +7,6 @@ An end-to-end MLOps system for five-session realized-volatility forecasts across
 surface is one global model, one API contract, one Streamlit dashboard, and one
 monitoring workflow.
 
-The earlier AAPL prototype remains in Git history and in historical benchmark
-material; it is not an active serving, dashboard, Docker, or scheduled
-monitoring path in this repository.
-
 ## Global model
 
 The pooled PyTorch LSTM uses ticker embeddings, six leakage-safe features,

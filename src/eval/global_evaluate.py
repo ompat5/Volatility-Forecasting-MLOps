@@ -26,9 +26,9 @@ from src.models.global_lstm import GlobalVolatilityLSTM
 from src.models.global_train import (
     fit_global_model_for_epochs,
     predict_global_model,
+    set_seeds,
     train_global_model,
 )
-from src.models.train import set_seeds
 
 MODEL_NAME = "global_lstm"
 LOGGER = logging.getLogger(__name__)

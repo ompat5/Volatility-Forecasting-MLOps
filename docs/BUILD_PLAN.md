@@ -1,485 +1,82 @@
-# Project 1 — Deep Learning Volatility Forecasting with Full MLOps
+# Global volatility forecasting architecture
 
-**Modern ML / ML Engineer resume track**
+## Objective
 
----
+Forecast five-session realized volatility for 34 equity and ETF targets with
+one pooled model. `^VIX` is mandatory market context, never a forecast target.
+The project emphasizes reproducible, leakage-safe MLOps rather than overstated
+model accuracy.
 
-## The project in one sentence
-
-Build a system that forecasts the future **realized volatility** of a basket of stocks/ETFs using a deep learning model, benchmark it honestly against the classical econometric standard (GARCH), and wrap the whole thing in a production engineering lifecycle: experiment tracking, a deployed API, automated CI/CD, drift monitoring, inference optimization, and a live demo.
-
-## Why this is the right project (and defensible in an interview)
-
-- **You are NOT predicting price.** Predicting prices/returns is near-impossible (efficient markets), and a project claiming to do it well signals data leakage to anyone who knows finance. Avoid it.
-- **Volatility clusters.** Calm follows calm, turbulence follows turbulence. This is a real, well-documented statistical property, so volatility is genuinely forecastable. That makes your modest, honest results *credible*.
-- **It feeds your options interest.** Volatility is the core of options pricing (implied vol, the VIX, Black-Scholes). This project is the natural on-ramp to the options world you want to learn.
-- **The MLOps wrapper is the star.** The model is the vehicle; what gets you hired is everything in the purple boxes of the architecture diagram — the part most candidates never build.
-
----
-
-## Glossary: every unfamiliar term in one line
-
-Read this once. You'll meet each tool again in the phase where you actually use it.
-
-| Term | What it is, in one line |
-|---|---|
-| **Realized volatility** | A measure of how much an asset's returns actually bounced around over a window (e.g. the standard deviation of recent daily returns). This is your prediction target. |
-| **Implied volatility / VIX** | The volatility the *options market* expects going forward. The VIX is the implied vol of the S&P 500. Used later as a feature and as the options tie-in. |
-| **GARCH** | The classic statistical model for forecasting volatility. Your respected baseline — beating or matching it is the benchmark that proves your DL model is real. |
-| **Walk-forward validation** | Time-series cross-validation that only ever trains on the past and tests on the future. The discipline that prevents data leakage. The single most important methodological idea here. |
-| **LSTM / TCN** | Two neural network architectures for sequence data. LSTM (recurrent) is the standard starting point; TCN (temporal convolution) is a strong, simpler-to-train alternative. |
-| **PyTorch** | The deep learning library you'll train the model in. |
-| **MLflow** | Tracks every training run (parameters, metrics, model files) so you can compare experiments and register your best model. "Experiment tracking + model registry." |
-| **FastAPI** | A Python library for building a web API. You'll wrap your model in one so others can send it data and get a forecast back. |
-| **Docker** | Packages your app + all its dependencies into a portable "container" that runs identically anywhere. "It works on my machine" — solved. |
-| **CI/CD (GitHub Actions)** | Automation that runs your tests and builds your Docker image every time you push code. CI = continuous integration, CD = continuous delivery. |
-| **ONNX** | An open format you export your trained model to, so it runs faster and lighter at inference time. Pairs with quantization (shrinking the model to INT8). |
-| **Drift detection** | Monitoring that fires an alert when incoming data stops looking like the training data — e.g. a market regime shift. Finance gives you the most natural possible example of drift. |
-| **Streamlit** | The fastest way to turn a Python script into a simple interactive web dashboard for your demo. |
-
----
-
-## Architecture recap
+## System contract
 
 ```mermaid
-flowchart TD
-    A["Data ingestion<br/>(yfinance OHLCV + VIX)"] --> B["Feature pipeline<br/>(returns, realized vol, lags)"]
-    B --> C["Baseline models<br/>(naive, EWMA, GARCH)"]
-    B --> D["Deep learning<br/>(LSTM / TCN, PyTorch)"]
-    C --> E["Walk-forward evaluation<br/>(tracked in MLflow)"]
+flowchart LR
+    A["34 targets + VIX"] --> B["Balanced panel\ntrain-only preprocessing"]
+    B --> C["Global LSTM\nticker embeddings"]
+    B --> D["Naive · EWMA · GARCH"]
+    C --> E["Purged walk-forward evaluation"]
     D --> E
-    E --> F["Model registry<br/>(best model, ONNX export)"]
-    F --> G["Inference API<br/>(FastAPI in Docker)"]
-    G --> H["Dashboard<br/>(Streamlit demo)"]
-    G --> I["Monitoring<br/>(drift + error alerts)"]
+    E --> F["Checksum-pinned artifact"]
+    F --> G["FastAPI + Docker"]
+    F --> H["FP32 ONNX runtime"]
+    F --> I["Streamlit dashboard"]
+    F --> J["Full-universe monitoring"]
 ```
 
-Color logic from the chat diagram: **data work** (ingestion, features), **modeling + honest evaluation** (baselines, DL, walk-forward), and **production engineering** (registry, API, dashboard, monitoring). The last group is what differentiates you.
+## Non-negotiable methodology
 
----
+- Predict volatility, never price or returns.
+- Use ordered expanding-window validation with five-session purges; never
+  shuffle dates.
+- Fit every scaler on the relevant training dates only.
+- Preserve per-ticker temporal windows; a window cannot cross ticker boundaries.
+- Keep the final holdout untouched until the model and epoch selection are
+  frozen.
+- Fit GARCH parameters on training data only; observed later returns may update
+  its state but never refit its parameters.
+- Treat material performance gains as suspicious until leakage checks pass.
 
-## The exact evaluation protocol (read before you write any model code)
+## Implemented system
 
-This is the methodological heart of the project. Get this right and the rest is engineering.
+1. **Universe and panel:** `configs/tickers.yaml` declares 34 targets and VIX;
+   `src/data/panel.py` creates a timezone-safe balanced panel with four target
+   features and two VIX features.
+2. **Evaluation:** `src/eval/panel_splits.py` creates global purged calendars;
+   `src/features/panel_preprocessing.py` enforces train-only scaling;
+   `src/eval/global_evaluate.py` reports per-ticker, group, macro, and micro
+   metrics.
+3. **Model:** `src/models/global_lstm.py` pools learning across targets with a
+   ticker embedding and positive log-volatility output.
+4. **Artifact:** `scripts/train_global.py` requires matching evaluation evidence
+   before it packages the model, scaler, universe, architecture, and checksums
+   in one MLflow pyfunc.
+5. **Serving and optimization:** `src/serving/app.py` serves the long-form
+   global API; `src/optimization/global_onnx.py` validates all ticker embeddings
+   against the FP32 ONNX graph.
+6. **Operations:** the dashboard and scheduled monitor use the same immutable
+   release and fail closed on incomplete universe data or incompatible artifacts.
 
-1. **Target:** For each ticker and each day *t*, predict the realized volatility over the next *h* days (start with *h* = 5, the trading week). Compute realized vol as the standard deviation of daily log returns over the window, annualized.
-2. **Walk-forward / expanding window:** Sort by date. Train on days `[start … t]`, validate on the next block, then roll forward and repeat. **Never shuffle. Never let test dates appear before train dates.**
-3. **Fit scalers on training data only.** Compute means/std for feature scaling from the *training* slice and apply them to validation/test. Fitting on the whole dataset is the most common silent leak.
-4. **Lag your features correctly.** A feature available at prediction time *t* must only use information known at *t* or earlier. Double-check that realized-vol features aren't accidentally peeking into the target window.
-5. **Metrics:** Report **RMSE** and **MAE** on volatility, plus **QLIKE** (a loss function designed specifically for volatility forecasts that penalizes under-prediction appropriately). Compare DL vs GARCH vs naive on the *same* walk-forward splits.
-6. **Expected honest result:** Your DL model may only *modestly* beat GARCH, especially at short horizons, and may tie it at others. That is a credible, mature finding — report it plainly. Claiming you crushed GARCH is a red flag.
+## Published evidence
 
----
+The frozen final holdout covers 252 sessions. The global model has pooled
+RMSE/MAE of `0.14235`/`0.08837`, compared with GARCH at
+`0.14436`/`0.09785`. GARCH has stronger QLIKE (`0.52160` versus `0.72611`).
+The result is a mixed but honest outcome; complete evidence is stored in
+`benchmarks/global_model.json`.
 
-## Datasets and libraries
+FP32 ONNX matches PyTorch across all ticker embeddings with maximum absolute
+difference `5.96e-08`. Its median core latency is `0.7304 ms` versus
+`1.8345 ms` for PyTorch, while end-to-end latency is nearly unchanged because
+panel construction and scaling dominate.
 
-**Data (all free):**
-- `yfinance` — daily OHLCV (open/high/low/close/volume) for any ticker. Start with ~30–50 liquid names (large-cap stocks + sector ETFs) plus `^VIX`.
-- Optionally `pandas-datareader` / Stooq as a backup source.
-- Aim for ~10–15 years of daily history per ticker — enough to span multiple volatility regimes (2008, 2020, etc.), which makes your drift story real.
+## Operating and improving the system
 
-**Core libraries by phase:**
-- Data/features: `pandas`, `numpy`
-- Baselines: `arch` (GARCH), `statsmodels`
-- Deep learning: `torch` (PyTorch), optionally `pytorch-lightning` for cleaner training loops, `scikit-learn` for scaling/metrics
-- Tracking: `mlflow`
-- Config: `hydra-core` or plain YAML
-- Serving: `fastapi`, `uvicorn`, `pydantic`
-- Containers/CI: Docker, GitHub Actions (no install — it's a YAML file in your repo)
-- Optimization: `onnx`, `onnxruntime`
-- Monitoring: `evidently` (drift reports) or a small custom check
-- Demo: `streamlit`
+Use the existing validation folds for experimental selection. Treat the frozen
+holdout only as a final confirmation, then require later out-of-sample evidence
+before deploying a successor. Monitor PSI drift as distribution change, not a
+standalone accuracy verdict; investigate it alongside delayed error and regime
+status.
 
----
-
-## Week-by-week build plan (~7–8 weeks part-time)
-
-Each phase ends with something you can commit, push, and point to. Build the MVP path first; circle back for stretch items once the end-to-end loop works.
-
-### Phase 0 — Setup and foundations (2–3 days)
-**Goal:** A clean, professional repo skeleton.
-- Install Python (use `uv` or `conda` for environments), set up VS Code, create a GitHub repo.
-- Lay out a sane structure: `data/`, `src/` (with `features/`, `models/`, `serving/`), `notebooks/`, `tests/`, `configs/`, `README.md`, `requirements.txt` (or `pyproject.toml`).
-- Learn the minimum Git workflow: branch, commit, push, pull request.
-- **Deliverable:** Empty-but-structured repo on GitHub with a README skeleton (Hook / Demo / Architecture / Results / How to run — fill in as you go).
-
-### Phase 1 — Data and baselines (Week 1)
-**Goal:** Forecast volatility with classical methods first, and nail the evaluation harness. *This is the most important week.*
-- Pull OHLCV for your basket with `yfinance`; cache to local Parquet/CSV.
-- Compute daily log returns and realized volatility; build the target (next-*h*-day realized vol).
-- Build the **walk-forward split function** and the metrics (RMSE, MAE, QLIKE).
-- Implement three baselines: naive (last value), EWMA, and GARCH(1,1) via `arch`.
-- Produce a metrics table comparing the three on identical splits.
-- **Learn:** realized vs implied vol, volatility clustering, the leakage trap, proper backtest splits.
-- **Deliverable:** A notebook + a reusable `src/` module that outputs a baseline metrics table. You now have a benchmark to beat.
-
-### Phase 2 — The deep learning model (Weeks 2–3)
-**Goal:** A PyTorch sequence model that matches or beats GARCH on your splits.
-- Build a windowed dataset: each sample is a sequence of the last *N* days of features → next-*h*-day realized vol.
-- Start with an **LSTM or GRU**. Train a single **global** model across all tickers (more data, more impressive than one model per ticker); add a ticker embedding as a stretch.
-- Fit scalers on train only; respect the walk-forward protocol from Phase 1.
-- Evaluate against GARCH/naive on the same splits. Plot predictions vs actuals.
-- **Stretch:** swap in a **Temporal Convolutional Network (TCN)** or a small Transformer encoder and compare.
-- **Learn:** sequence modeling, windowing, overfitting control (early stopping, dropout), honest train/val/test discipline.
-- **Deliverable:** Trained model + a DL-vs-baseline comparison table and plot.
-
-### Phase 3 — Experiment tracking and reproducibility (Week 3–4)
-**Goal:** Make every result reproducible and comparable.
-- Wrap training so each run logs params, metrics, and artifacts to **MLflow**.
-- Move hyperparameters into a **config file** (Hydra/YAML); set random seeds.
-- Register your best model in the **MLflow model registry**.
-- **Learn:** experiment tracking, model registry, reproducibility — core MLOps vocabulary.
-- **Deliverable:** MLflow UI showing multiple compared runs, a registered "best" model, a config-driven `train.py`.
-
-### Phase 4 — Serving and containerization (Week 4–5) — ✅ COMPLETE (merged to `main`)
-**Goal:** Anyone can send a request and get a forecast.
-- Build a **FastAPI** service: an endpoint that accepts a ticker (or a recent feature window) and returns a volatility forecast plus a prediction interval. Load the registered model.
-- Validate inputs/outputs with `pydantic`. Write a couple of `pytest` tests.
-- **Dockerize** it; confirm it runs in a container with one command.
-- **Learn:** model serving, REST APIs, containers.
-- **Deliverable:** A running containerized API with an example `curl` command in the README.
-
-**What actually shipped (83 tests):**
-- Model + scaler + inference glue bundled into one `mlflow.pyfunc` (`VolatilityForecaster`) — scaling inseparable from inference, no version drift. Fed by `build_inference_features` (leakage-safe; keeps the most recent `horizon` rows).
-- **FastAPI** `POST /predict` (`{prices: [float]}`, `min_length=90` → `{forecast, horizon}`) + `GET /health`; model loaded once at startup via `lifespan`; `pydantic`-validated; model errors → clean 422.
-- **Dockerized**: one-command CPU-only image serving a baked-in registered model version by local path (no `mlflow.db` in the image); `scripts/export_model.py` snapshots the model into the build context.
-- **Deviations from the original plan:** input is a raw **price window**, not a ticker (keeps yfinance/network out of the request path — deterministic + testable). **Prediction interval deferred** (point forecast only for now) — candidate for a later stretch. README `curl` runbook still to be added.
-- **Design note:** never type-hint `predict`'s `model_input` — MLflow's validation coerces it and silently corrupts predictions.
-
-### Phase 5 — Automation, CI/CD, and monitoring (Week 5–6) — ✅ COMPLETE
-**Goal:** The system maintains and watches itself.
-- Add a **GitHub Actions** workflow: on every push, run linting (`ruff`) + tests (`pytest`) + build the Docker image.
-- Add a scheduled job (GitHub Actions `cron`, or `Prefect` as a stretch) that refetches data daily, regenerates forecasts, and logs predictions.
-- Add **drift + error monitoring** (`evidently` or custom): track feature drift and rolling prediction error; fire an alert (log line or Slack webhook) when a threshold is breached.
-- **The finance payoff:** a volatility *regime shift* (a market stress event) is a textbook example of real distribution drift. Write this up — it's a standout narrative most portfolios can't tell honestly.
-- **Learn:** CI/CD, light orchestration, drift detection.
-- **Deliverable:** A green CI badge, a scheduled pipeline, and a drift/monitoring report.
-
-**What actually shipped (91 tests):**
-- **CI:** every push and pull request runs Ruff, pytest, a Docker build, and an
-  end-to-end container smoke test using a deterministic CI-only model fixture.
-- **Immutable model delivery:** the real AAPL MLflow pyfunc is published as the
-  `aapl-lstm-v1` GitHub Release asset; the scheduled job verifies its SHA-256
-  digest before loading it.
-- **Scheduled pipeline:** weekday GitHub Actions workflow refreshes AAPL history,
-  generates the live five-day forecast, and reconstructs 60 recent as-of
-  forecasts whose targets are now observable.
-- **Monitoring:** custom PSI feature drift, an RV20 training-percentile regime
-  check, and recent-vs-prior rolling error with RMSE, MAE, and QLIKE.
-- **Outputs:** GitHub annotations and workflow summary plus CSV, JSON, Markdown,
-  and exact-price-snapshot artifacts retained for 90 days.
-- **Scope note:** monitoring is AAPL-only because the deployed model is currently
-  AAPL-only. Slack alerts and indefinite external metrics storage remain stretch
-  items; GitHub annotations/artifacts are the Phase 5 MVP alert and log channel.
-
-### Phase 6 — Optimization, demo, and polish (Week 6–7) — 🟡 IN PROGRESS
-**Goal:** Make it fast, make it visible, make it legible.
-- Export the model to **ONNX**; optionally quantize to INT8. Benchmark **inference latency and model size** before vs after, and report the accuracy delta. (This is the differentiator most candidates never touch.)
-- Build a **Streamlit** dashboard: pick a ticker → see forecast vs realized vol, DL-vs-GARCH comparison, and a drift indicator. Deploy it (Streamlit Community Cloud or Hugging Face Spaces).
-- Finish the **README** (one-line hook, demo GIF, architecture diagram, results table with metrics, clear run instructions) and write **one short blog post** explaining your key decisions and trade-offs.
-- **Deliverable:** A live demo link, a polished repo, and a write-up.
-
-**What has shipped (107 tests):**
-- Reproducible legacy `torch.onnx.export` command for the FP32 `(batch, 30, 4)`
-  LSTM core, with ONNX graph validation and automated PyTorch parity coverage.
-- Machine-readable FP32 benchmark in `benchmarks/onnx_fp32.json`. On the recorded
-  one-thread Darwin x86_64 run, ONNX reduced median core latency from 0.3820 ms
-  to 0.1036 ms (3.7x) and end-to-end latency from 4.2884 ms to 3.9003 ms (9%).
-- Dynamic INT8 experiment in `benchmarks/onnx_int8.json`. It reduced the graph
-  from 74,079 to 23,715 bytes but improved end-to-end median latency by less than
-  1% and moved forecasts by as much as 0.0121. **FP32 was retained**; INT8 is a
-  documented experiment, not the serving default.
-- `ONNXVolatilityForecaster` reuses the production scaler and leakage-safe Python
-  feature pipeline. FastAPI supports it explicitly via `MODEL_BACKEND=onnx`;
-  MLflow remains the default, so optimization was not a silent behavior change.
-- An explicitly **AAPL-only** Streamlit dashboard shows the latest forecast,
-  recent realized volatility, forecast-vs-realized history, the stored baseline
-  table, and feature-drift/regime/delayed-error signals.
-- The dashboard is publicly deployed at
-  https://volatility-forecaster.streamlit.app/ and follows `main`. When model
-  files are absent, it downloads the checksum-pinned `aapl-lstm-v1` release and
-  exports FP32 ONNX once per application process.
-- Optimization and dashboard commits were pushed directly to `main` as
-  `19809bf`, `3d0f67e`, and deployment documentation commit `6c1bcde` (there is
-  no Phase 6 GitHub PR record).
-
-**Remaining Phase 6 work:**
-1. Add a dashboard screenshot or short GIF to the README.
-2. Write the short ONNX/INT8 engineering trade-off post.
-3. Perform the final README/runbook review, update the resume bullet, and mark
-   Phase 6 complete after the final green CI run.
-
-These presentation-only tasks are deferred until the global-model migration
-below is complete, so the final demo media and portfolio wording do not freeze
-the temporary AAPL-only architecture in place.
-
-**Acceptance status:** reproducible ONNX export ✅; automated parity ✅;
-published benchmark artifacts/numbers ✅; evidence-backed INT8 decision ✅;
-working deployed AAPL dashboard ✅; final demo media and trade-off write-up ⏳.
-
-**Guardrails for this phase:**
-- Do not claim basket-level inference: ingestion covers 35 symbols, but the
-  trained/deployed model is AAPL-only.
-- Benchmark core inference and raw-prices-to-forecast latency separately.
-- The existing LSTM output is unconstrained; do not silently clamp negative
-  forecasts during optimization. That would be a new model behavior requiring
-  reevaluation and versioning.
-- Prediction intervals and Slack/external long-term monitoring storage remain
-  deferred unless explicitly pulled into scope.
-
-### Phase 7 — Global basket model migration — 🟡 IN PROGRESS
-**Goal:** replace the AAPL-only model with one pooled model for all 34 forecast
-targets, using `^VIX` as a context input. The system ingests 35 symbols, but VIX
-is not itself a forecast target.
-
-The migration is deliberately end-to-end: data, evaluation, model packaging,
-serving, ONNX, monitoring, and the dashboard must all share the same explicit
-universe contract before the production default changes.
-
-**Global migration Phase 1 — data foundation (implemented):**
-- `configs/tickers.yaml` now distinguishes 34 targets from the VIX context
-  series and retains asset groups for later evaluation/dashboard breakdowns.
-- `src/data/universe.py` provides a typed, validated source of truth consumed by
-  ingestion and future global components.
-- `src/data/panel.py` normalizes exchange-local timestamps to timezone-free U.S.
-  session dates, preventing the New York-equity/Chicago-VIX join failure.
-- The balanced panel contains the four existing asset features, same-session
-  VIX level and VIX return, and the five-day realized-volatility target.
-- `scripts/build_global_panel.py` writes a gitignored Parquet panel plus a
-  manifest containing universe roles, feature/target schema, horizon, coverage,
-  raw-file hashes, and per-symbol source ranges.
-- On the current cache the contract yields 118,354 rows: 3,481 dates for each of
-  34 targets from 2012-08-14 through 2026-06-18, with no missing values.
-
-**Global migration Phase 2 — evaluation boundaries (implemented):**
-- `configs/global_model.yaml` owns global-only evaluation and future model
-  choices, keeping the legacy AAPL configuration unchanged.
-- `PanelVolatilityDataset` builds sequences inside one ticker at a time, returns
-  a stable ticker ID for the future embedding, and exposes an exact
-  `(date, ticker)` prediction index.
-- Validation/test anchors may use earlier feature context, but only the anchor
-  dates contribute labels to those partitions. The first training anchors that
-  lack 30 complete feature rows are explicitly recorded and excluded.
-- `build_panel_split_plan` partitions unique calendar dates once for the entire
-  universe, with five-session embargoes before both validation and test.
-- Five expanding folds are used for model/epoch selection. The final 252-session
-  holdout is never part of those folds; after selection, its model must refit on
-  every pre-embargo development date rather than hold back another stale
-  validation period.
-- `PanelFeatureScaler` requires explicit training dates and records them with
-  the fitted row count; validation, test, and holdout values cannot influence
-  its statistics.
-- `scripts/build_global_splits.py` persists the exact fold and holdout calendar.
-  On the current cache, final refit data ends 2025-06-10, five sessions are
-  embargoed, and the untouched holdout runs 2025-06-18 through 2026-06-18.
-
-**Global migration Phase 3 — model and honest evaluation (implemented):**
-- `GlobalVolatilityLSTM` shares one sequence encoder across all 34 targets and
-  conditions its head on a learned ticker embedding. It predicts log realized
-  volatility; the public prediction path exponentiates it and rejects invalid
-  outputs, so volatility forecasts are strictly positive without clamping.
-- `BalancedDateBatchSampler` shuffles dates, not individual panel rows, and
-  includes every target ticker equally in each training batch.
-- Each CV fold fits its scaler on that fold's training dates only, early-stops
-  on its purged validation dates, and scores its later test dates. The median
-  best epoch across folds is fixed before the final model refits on all allowed
-  development dates.
-- Naive and EWMA forecasts are same-date comparators. GARCH(1,1) parameters are
-  fit only on each fold's training slice, while its latent variance state is
-  updated with newly observed returns before each as-of forecast; test returns
-  never enter parameter estimation.
-- Evaluation reports exact prediction rows, per-ticker metrics, pooled micro,
-  equal-ticker macro, and asset-group slices. The concise committed benchmark
-  also records the panel hash, universe, config, split plan, and epoch choice.
-- On the untouched 252-session holdout, global-LSTM micro RMSE/MAE are
-  `0.14235`/`0.08837`, versus GARCH `0.14436`/`0.09785` and EWMA
-  `0.14536`/`0.09694`. GARCH remains better on QLIKE (`0.52160` versus
-  `0.72611`), so the result is a modest, mixed win rather than a blanket claim.
-- Coverage audit: 399,432 prediction rows, zero duplicate keys, finite positive
-  forecasts, and all 34 targets present for every model in every fold and the
-  final holdout. The LSTM beats GARCH on per-ticker holdout RMSE for 21/34,
-  MAE for 28/34, and QLIKE for 5/34 targets.
-
-**Global migration Phase 4 — evidence-gated artifact (implemented):**
-- `scripts/train_global.py` refuses to train unless the current panel SHA-256,
-  full global configuration, ordered universe, GARCH-inclusive metrics, and
-  selected epoch count match the committed Phase 3 benchmark.
-- The post-evaluation candidate refits for the selected four epochs on all
-  3,481 target-observable dates: 117,368 ticker sequences. Its scaler fits all
-  118,354 rows only after the evaluation result is frozen.
-- One MLflow pyfunc bundles `state_dict` weights, scaler, 34-ticker embedding
-  vocabulary, groups/context roles, feature schema, architecture, full config,
-  training coverage, evaluation evidence, and component checksums.
-- The raw inference contract is long-form `(date, ticker, adjusted_close)`.
-  Requests may select known targets but must include VIX; preprocessing remains
-  inside the artifact and output is one positive forecast row per target.
-- The artifact is registered separately as `global-volatility-lstm`. Versions
-  are explicitly tagged candidate/non-production/non-serving; the AAPL
-  `volatility-lstm` registry and API default are untouched.
-- `scripts/export_global_model.py` requires a numeric registry version, refuses
-  overwrite, and snapshots to a separate gitignored `global_model/` directory.
-  No floating `latest` export is allowed.
-- Real-data round trip: registered version 3 loaded successfully, produced 34
-  positive forecasts from all targets plus VIX, and its exported snapshot
-  served an AAPL/SPY subset outside the repository import path. See
-  `docs/GLOBAL_MODEL.md` for the contract.
-
-**Global migration Phase 5 — backward-compatible API and CI (implemented):**
-- `POST /predict/global` accepts the artifact's long-form raw observations and
-  returns one validated row per requested target. Known subsets and all 34
-  targets share the same path; `^VIX` remains mandatory.
-- `GLOBAL_MODEL_URI` is optional and separate from the AAPL `MODEL_URI` and
-  `MODEL_BACKEND`. Without it, the service starts normally, `/predict` is
-  unchanged, and the global route returns HTTP 503.
-- Registry-backed global URIs require an explicit numeric
-  `global-volatility-lstm` version. Startup also unwraps the artifact and checks
-  its role, exact ordered 34-target universe, VIX context, and horizon against
-  repository configuration. A mismatched or AAPL artifact fails closed.
-- `GET /health/global` reports global readiness separately without changing the
-  existing `GET /health` response.
-- A deterministic global CI fixture carries the complete production packaging
-  and universe contract but is marked untrained. CI starts the same Docker image
-  in AAPL-only mode and in opt-in global mode, then requires one finite positive
-  forecast for every target plus direct pyfunc/API parity.
-
-**Global migration Phase 6 — FP32 ONNX optimization (implemented):**
-- The exported graph contains the shared LSTM, ticker embedding, head, and
-  exponential output transform. It accepts dynamic batches of scaled
-  `(30, 6)` windows plus INT64 ticker IDs and still produces strictly positive
-  volatility forecasts.
-- Raw-price validation, feature construction, the fitted scaler, ticker order,
-  and response construction remain shared Python code. ONNX changes runtime,
-  not preprocessing or model semantics.
-- A checksummed export sidecar binds the graph to the source artifact manifest,
-  model state, scaler, horizon, target count, and parity evidence. All 34 ticker
-  embeddings must match PyTorch before export succeeds; the real candidate's
-  maximum absolute difference was `5.96e-08`.
-- On the recorded one-thread 34-target run, median core latency fell from
-  `1.8345 ms` to `0.7304 ms` (2.5×), while full long-form request latency moved
-  only from `147.6555 ms` to `146.7871 ms` (~0.6%). Feature construction and
-  scaling dominate the application path.
-- `GLOBAL_MODEL_BACKEND=onnx` is an explicit opt-in and conflicts with a set
-  `GLOBAL_MODEL_URI`. The AAPL backend/default and global MLflow default remain
-  unchanged. CI exercises all three container modes.
-- Reproduction instructions and trade-offs are in `docs/GLOBAL_ONNX.md`; the
-  machine-readable report is `benchmarks/global_onnx_fp32.json`.
-
-**Global migration Phase 7 — candidate monitoring (implemented):**
-- `monitoring/global_reference.json` binds fixed per-ticker asset-feature PSI
-  bins, one shared VIX reference, and per-ticker RV20 p95/p99 thresholds to the
-  exact accepted training-panel checksum and authoritative universe.
-- Every run requires all 34 targets plus VIX, checks duplicate/finite/positive
-  inputs and staleness, and requires synchronized one-row-per-target forecasts.
-- Sixty historical dates are reconstructed through the raw-price artifact path;
-  each call sees only its own as-of history. Target values are joined only after
-  prediction, preserving the delayed-error no-leakage contract.
-- Reports include pooled micro, equal-ticker macro, asset-group, and per-ticker
-  drift, regime, RMSE, MAE, and QLIKE evidence. Shared VIX drift is counted once,
-  not repeated as 34 apparent asset failures.
-- Fleet aggregation emits one alert: 10% non-ok produces warning, 25% critical
-  produces critical, and one isolated critical ticker becomes one warning rather
-  than an alert storm. Contract/data-quality failures still fail closed.
-- The separate weekday workflow remains dormant until an immutable global model
-  URL and checksum are explicitly configured. Manual candidate QA is available;
-  the AAPL production workflow is unchanged.
-- First real cached-data run (2026-06-26): complete 34+1 coverage and data quality
-  `ok`; broad feature drift `critical`; 7/34 elevated regimes; 14/34 ticker error
-  warnings/criticals; pooled recent/baseline RMSE ratio `1.267` (`ok`).
-
-**Global migration Phase 8 — candidate dashboard (implemented):**
-- `dashboard/global_app.py` is a separate candidate entrypoint; the deployed
-  AAPL `dashboard/app.py` remains unchanged.
-- One cached all-universe model/data/monitoring snapshot backs every ticker
-  view. UI selection slices the synchronized snapshot instead of rerunning 60
-  historical dates across all 34 targets.
-- Startup requires the global candidate role, exact ordered target/VIX
-  universe, five-session horizon, complete checksum-bound FP32 ONNX bundle,
-  and stored final-holdout evidence for all four models across ticker, group,
-  macro, and micro views. A partial artifact or evidence table fails closed.
-- The dashboard exposes target and group selection, latest forecast, recent
-  realized volatility, delayed forecast history, fleet/group/ticker monitoring,
-  shared VIX context, and untouched final-holdout comparisons. VIX cannot be
-  selected as a target.
-- Fresh inputs enforce wall-clock age. Cached and exact-Parquet modes are
-  explicitly labeled offline replays and skip only that comparison.
-- The real exported candidate and cached basket produced 34 live forecasts,
-  2,074 ledger rows, and 4,080 chart rows. The Streamlit page was exercised end
-  to end; details are in `docs/GLOBAL_DASHBOARD.md`.
-
-**Global migration Phase 9 — immutable candidate release (implemented):**
-- A deterministic packager validates registry version 3, rejects CI fixtures,
-  verifies both MLflow and checksum-bound ONNX runtimes, and normalizes archive
-  metadata. Two real-candidate runs produced the same 334,241-byte archive and
-  SHA-256 `c40b48f186a9255f6afcfffde1a5ca02f0ff2379ab9d68da87d0b024d353ee0a`.
-- `configs/global_release.yaml` pins the exact prerelease tag, asset URL,
-  digest, registered-model name, and numeric source version. No floating alias
-  or repository-variable override is accepted.
-- Download verifies the digest before safe extraction, then repeats registry,
-  artifact, MLflow, and ONNX validation; failures remove the extracted path.
-- The candidate dashboard automatically uses the pinned release when no local
-  model is supplied. Candidate monitoring downloads the same release pin.
-- The candidate workflow owns a weekday schedule without a mutable variable
-  gate. GitHub schedules run only from the default branch, so it becomes active
-  after deliberate merge; manual branch dispatch is the pre-merge acceptance.
-- Public-asset acceptance passed through both downloaded runtimes. Cached
-  dashboard/monitoring produced 34 forecasts, 2,074 ledger rows, and 4,080
-  chart rows. A fresh 35-series run enforced wall-clock freshness and produced
-  34 live plus 2,040 delayed forecasts as of 2026-10-02.
-- A transient empty `GE` response on the first fresh run led to a bounded
-  per-symbol retry. A second failure still aborts the complete run, preserving
-  the no-partial-universe guardrail.
-- Packaging, retrieval, schedule boundaries, and the remaining promotion gate
-  are documented in `docs/GLOBAL_RELEASE.md`.
-
-**Global migration Phase 10 — global-only deployment cutover (implemented):**
-
-- `POST /predict`, Docker, Streamlit, and scheduled monitoring now use the
-  complete global target/VIX contract; the AAPL deployment code and workflow
-  were removed from active repository paths.
-- Both MLflow and FP32 ONNX global runtimes are baked and validated through the
-  same container contract. CI requires all 34 forecasts from each backend.
-- The historical holdout trade-off remains visible: pooled RMSE/MAE improve
-  against GARCH while QLIKE is 39.2% worse and wins only 5/34 tickers.
-- The immutable version-3 global archive remains checksum-pinned. Its candidate
-  tag records evaluation provenance, while this repository uses it as the sole
-  deployment artifact.
-- The decision and rollback boundary are in
-  [`docs/PRODUCTION_CUTOVER.md`](PRODUCTION_CUTOVER.md).
-
-**Next migration step:** operate and iterate on the global model. Any successor
-must use validation-only selection and new time-forward evidence; do not reuse
-the published final holdout for model selection.
-
----
-
-## MVP vs stretch
-
-**Minimum viable (ship this first, then apply):**
-Data + features → walk-forward eval → GARCH baseline → one LSTM that matches/beats it → MLflow tracking → FastAPI in Docker → basic README + Streamlit demo.
-
-**Stretch (depth that impresses):**
-TCN/Transformer comparison · ONNX + INT8 with a latency/size benchmark · drift monitoring with the regime-shift write-up · scheduled daily pipeline · the options tie-in below.
-
----
-
-## The options tie-in (high-value stretch, directly serves your interest)
-
-Once the core works, add a comparison between your **forecasted realized volatility** and the **option-implied volatility** (use the VIX for index-level work, or pull an option chain for a single name). The question — *"is the market over- or under-pricing future volatility right now?"* — is exactly how volatility traders think. Frame it as analysis, not a trading strategy, and you've connected this project straight to the options domain you're trying to learn.
-
----
-
-## Resume bullet target
-
-> Built and deployed an end-to-end PyTorch system forecasting five-day AAPL realized volatility; improved walk-forward RMSE by 6% and MAE by 7% versus EWMA while remaining near-tied on QLIKE. Tracked experiments and model versions in MLflow, served forecasts through FastAPI + Docker, added GitHub Actions CI and scheduled drift/error monitoring, reduced core inference latency 3.7x with FP32 ONNX, and deployed a live Streamlit dashboard.
-
-(Keep this AAPL-only until a genuine global model has been trained and evaluated.)
-
----
-
-## Common pitfalls to avoid
-
-- **Data leakage** — the #1 killer. Fit scalers on train only; never shuffle time series; verify feature lags.
-- **Predicting price/returns instead of volatility** — instant credibility loss.
-- **Claiming you crushed GARCH** — a modest win or a tie is the honest, expected outcome.
-- **Stopping at the notebook** — the deployment, monitoring, and optimization are the whole point of this project.
-- **A messy repo** — reviewers spend ~30 seconds. The README and a live demo carry enormous weight.
+See [GLOBAL_MODEL.md](GLOBAL_MODEL.md), [GLOBAL_ONNX.md](GLOBAL_ONNX.md),
+[GLOBAL_MONITORING.md](GLOBAL_MONITORING.md), and
+[GLOBAL_RELEASE.md](GLOBAL_RELEASE.md) for operational runbooks.

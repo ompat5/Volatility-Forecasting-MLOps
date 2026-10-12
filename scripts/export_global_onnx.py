@@ -11,7 +11,7 @@ from pathlib import Path
 
 from src.config import REPO_ROOT
 from src.optimization.global_onnx import export_global_lstm_to_onnx
-from src.optimization.onnx_export import DEFAULT_OPSET
+from src.optimization.global_onnx import DEFAULT_OPSET
 
 DEFAULT_ARTIFACT_DIR = REPO_ROOT / "global_model"
 

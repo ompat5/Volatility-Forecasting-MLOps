@@ -34,7 +34,6 @@ from src.monitoring.drift import (
     feature_drift_scores,
     validate_global_reference,
 )
-from src.monitoring.pipeline import summarize_forecast_error
 
 
 @dataclass(frozen=True)
@@ -79,6 +78,38 @@ class GlobalMonitoringConfig:
             0 < self.fleet_warning_fraction <= self.fleet_critical_fraction <= 1
         ):
             raise ValueError("Fleet alert fractions must be ordered within (0, 1]")
+
+
+def summarize_forecast_error(
+    history: pd.DataFrame,
+    recent_window: int,
+    warning: float,
+    critical: float,
+) -> dict[str, Any]:
+    """Summarize delayed error for one globally reconstructed ticker series."""
+    if len(history) <= recent_window:
+        raise ValueError("Backtest window must exceed the recent error window")
+    baseline = history.iloc[:-recent_window]
+    recent = history.iloc[-recent_window:]
+    baseline_rmse = rmse(baseline["actual"], baseline["forecast"])
+    recent_rmse = rmse(recent["actual"], recent["forecast"])
+    ratio = recent_rmse / max(baseline_rmse, 1e-12)
+    summary: dict[str, Any] = {
+        "observations": len(history),
+        "rmse": rmse(history["actual"], history["forecast"]),
+        "mae": mae(history["actual"], history["forecast"]),
+        "baseline_rmse": baseline_rmse,
+        "recent_rmse": recent_rmse,
+        "recent_to_baseline_rmse_ratio": ratio,
+        "status": _severity(ratio, warning, critical),
+    }
+    if (history["forecast"] > 0).all():
+        summary["qlike"] = qlike(history["actual"], history["forecast"])
+    else:
+        summary["qlike"] = None
+        summary["non_positive_predictions"] = int((history["forecast"] <= 0).sum())
+        summary["status"] = "critical"
+    return summary
 
 
 def load_global_monitoring_config(

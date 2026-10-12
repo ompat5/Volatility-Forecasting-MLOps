@@ -4,7 +4,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /app
 
 # Production builds use ./global_model. CI overrides this with its deterministic
-# full-universe fixture; neither image contains an AAPL-only runtime.
+# full-universe fixture; production code has one global runtime contract.
 ARG MODEL_DIR=global_model
 ARG MODEL_VARIANT=production
 LABEL org.opencontainers.image.model-variant="${MODEL_VARIANT}"
