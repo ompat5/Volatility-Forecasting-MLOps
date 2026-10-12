@@ -179,7 +179,7 @@ def main() -> None:
         f"from run {run.info.run_id}"
     )
     print(f"Model URI: {model_info.model_uri}")
-    print("Production default remains the separate AAPL volatility-lstm model")
+    print("Package a checksum-pinned release only after validation evidence is approved")
 
 
 if __name__ == "__main__":

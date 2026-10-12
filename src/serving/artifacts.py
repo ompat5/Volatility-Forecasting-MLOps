@@ -9,19 +9,6 @@ import tarfile
 import tempfile
 from urllib.request import urlopen
 
-from src.monitoring.pipeline import load_monitoring_config
-
-
-def download_model(config_path: Path, output: Path) -> Path:
-    """Fetch, checksum, and safely extract the configured model archive."""
-    _, model_config = load_monitoring_config(config_path)
-    return download_verified_model(
-        model_config["url"],
-        model_config["sha256"],
-        output,
-    )
-
-
 def download_verified_model(
     url: str,
     expected_digest: str,

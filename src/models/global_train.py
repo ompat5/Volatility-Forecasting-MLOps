@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+import random
 
 import numpy as np
 import pandas as pd
@@ -20,7 +21,14 @@ from src.features.panel_dataset import (
 )
 from src.features.panel_preprocessing import PanelFeatureScaler
 from src.models.global_lstm import GlobalVolatilityLSTM
-from src.models.train import set_seeds
+
+
+def set_seeds(seed: int) -> None:
+    """Make global training and evaluation reproducible."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True, warn_only=True)
 
 
 @dataclass(frozen=True)

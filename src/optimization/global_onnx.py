@@ -18,7 +18,7 @@ from src.models.global_artifact import (
     validate_global_artifact_manifest,
 )
 from src.models.global_lstm import GlobalVolatilityLSTM
-from src.optimization.onnx_export import DEFAULT_OPSET
+DEFAULT_OPSET = 17
 
 FEATURES_INPUT_NAME = "features"
 TICKER_IDS_INPUT_NAME = "ticker_ids"

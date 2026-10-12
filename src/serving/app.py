@@ -2,7 +2,7 @@
 
 The public API has one deployment contract: long-form adjusted-close histories
 for one or more known targets plus the shared VIX context. It intentionally
-does not retain the former AAPL price-list endpoint.
+uses one complete-universe, long-form price contract.
 """
 
 from __future__ import annotations

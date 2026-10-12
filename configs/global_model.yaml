@@ -1,5 +1,4 @@
-# Configuration for the global 34-target model only. Keeping this separate from
-# model.yaml prevents global-model choices from changing the legacy AAPL model.
+# Configuration for the sole 34-target production model.
 data:
   horizon: 5
 eval:
